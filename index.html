@@ -73,12 +73,46 @@
   .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
   @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
 
-  .stat{background:var(--card); border-radius:15px; padding:12px 13px; box-shadow:var(--shadow);}
-  .stat .lb{font-size:10.5px; color:var(--dim); margin-bottom:3px;}
-  .stat .vl{font-size:17.5px; font-weight:800;}
+  .stat{background:var(--card); border-radius:15px; padding:14px 13px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .stat .lb{font-size:10.5px; color:var(--dim); margin-bottom:3px; font-weight:600;}
+  .stat .vl{font-size:18px; font-weight:800;}
   .stat .sb{font-size:10.5px; color:var(--faint); margin-top:2px;}
   .stat.flat{box-shadow:none; background:var(--card2);}
+  .stat-ico{width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:14px; margin-bottom:8px;}
+  .stat-in .stat-ico{background:var(--green-soft);}
+  .stat-ex .stat-ico{background:var(--red-soft);}
+  .stat-net .stat-ico{background:var(--pri-soft);}
   .g{color:var(--green);} .r{color:var(--red);} .a{color:var(--amber);} .b{color:var(--sky);} .p{color:var(--pri);}
+
+  /* ── Month navigator ── */
+  .m-month-nav{display:flex; align-items:center; justify-content:center; gap:14px; margin:2px 0 13px;}
+  .m-nav-btn{width:32px; height:32px; border-radius:11px; border:none; background:var(--card); box-shadow:var(--shadow);
+    color:var(--pri); font-size:18px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.15s;}
+  .m-nav-btn:active{transform:scale(.92);}
+  .m-nav-btn:disabled{opacity:.35; cursor:default;}
+  .m-month-cur{font-size:14.5px; font-weight:800; min-width:130px; text-align:center;}
+  .m-range-row{display:flex; justify-content:center; gap:9px; margin-bottom:11px;}
+  .m-custom-panel{display:flex; align-items:flex-end; gap:9px; flex-wrap:wrap; background:var(--card2);
+    border-radius:14px; padding:11px 12px; margin-bottom:13px;}
+  .m-custom-panel label{flex:1; min-width:120px;}
+
+  /* ── Donut chart ── */
+  .donut-wrap{position:relative; width:150px; height:150px; margin:4px auto 12px;}
+  .donut-svg{width:100%; height:100%; transform:rotate(0deg);}
+  .donut-center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .donut-total{font-size:15.5px; font-weight:800;}
+  .donut-total-lb{font-size:9.5px; color:var(--dim); margin-top:1px;}
+  .donut-legend{display:flex; flex-wrap:wrap; gap:7px 14px; justify-content:center; font-size:11px; color:var(--ink);}
+  .donut-legend span{display:flex; align-items:center; gap:5px;}
+  .donut-legend i{width:8px; height:8px; border-radius:3px; display:inline-block; flex-shrink:0;}
+  .donut-legend b{color:var(--dim); font-weight:700;}
+
+  /* ── Trend chart ── */
+  .trend-svg{width:100%; height:auto; display:block;}
+  .trend-legend{display:flex; gap:16px; justify-content:center; margin-top:6px; font-size:11px; color:var(--dim);}
+  .trend-legend span{display:flex; align-items:center; gap:5px;}
+  .trend-legend i{width:9px; height:9px; border-radius:3px; display:inline-block;}
 
   /* ── Quick tiles ── */
   .tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-bottom:13px;}
@@ -399,14 +433,44 @@
       <div class="hint">OCR อ่านตัวเลข/วันที่จากรูปแล้วเติมในฟอร์มด้านบนให้อัตโนมัติ — เช็คความถูกต้องก่อนกด "บันทึก" เสมอ (ความแม่นยำขึ้นกับความคมชัดของรูป) · รองรับเฉพาะไฟล์รูปภาพ</div>
     </div>
 
+    <div class="m-month-nav" id="m-month-nav">
+      <button class="m-nav-btn" id="m-month-prev" aria-label="เดือนก่อนหน้า">‹</button>
+      <div class="m-month-cur" id="m-month-cur">กรกฎาคม 2026</div>
+      <button class="m-nav-btn" id="m-month-next" aria-label="เดือนถัดไป">›</button>
+    </div>
+    <div class="m-range-row">
+      <button class="btn ghost sm" id="m-custom-toggle">📅 กำหนดช่วงเอง</button>
+      <button class="btn ghost sm" id="m-back-to-month" style="display:none">🗓️ กลับไปดูรายเดือน</button>
+    </div>
+    <div class="m-custom-panel" id="m-custom-panel" style="display:none">
+      <label><span>จากวันที่</span><input type="date" id="m-custom-from"></label>
+      <label><span>ถึงวันที่</span><input type="date" id="m-custom-to"></label>
+      <button class="btn sm" id="m-custom-apply">แสดงผล</button>
+    </div>
     <div class="grid3" style="margin-bottom:13px">
-      <div class="stat"><div class="lb" id="m-month-lb">เดือนนี้ · รายรับ</div><div class="vl num g" id="m-in">฿0</div></div>
-      <div class="stat"><div class="lb">เดือนนี้ · รายจ่าย</div><div class="vl num r" id="m-ex">฿0</div></div>
-      <div class="stat"><div class="lb">คงเหลือสุทธิ</div><div class="vl num" id="m-net">฿0</div></div>
+      <div class="stat stat-in"><div class="stat-ico">💰</div><div class="lb" id="m-month-lb">รายรับ</div><div class="vl num g" id="m-in">฿0</div></div>
+      <div class="stat stat-ex"><div class="stat-ico">📤</div><div class="lb">รายจ่าย</div><div class="vl num r" id="m-ex">฿0</div></div>
+      <div class="stat stat-net"><div class="stat-ico">⚖️</div><div class="lb">คงเหลือสุทธิ</div><div class="vl num" id="m-net">฿0</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>🍩 หมวดค่าใช้จ่าย <span class="tag" id="m-donut-tag">เดือนนี้</span></h2>
+        <div class="donut-wrap">
+          <svg id="m-donut-svg" viewBox="0 0 120 120" class="donut-svg"></svg>
+          <div class="donut-center"><div id="m-donut-total" class="donut-total">฿0</div><div class="donut-total-lb">รวมรายจ่าย</div></div>
+        </div>
+        <div id="m-donut-legend" class="donut-legend"></div>
+      </div>
+      <div class="card">
+        <h2>📈 แนวโน้ม 6 เดือน</h2>
+        <svg id="m-trend-svg" viewBox="0 0 280 150" class="trend-svg"></svg>
+        <div class="trend-legend"><span><i style="background:var(--green)"></i>รายรับ</span><span><i style="background:var(--red)"></i>รายจ่าย</span></div>
+      </div>
     </div>
 
     <div class="card">
-      <h2>หมวดค่าใช้จ่ายเดือนนี้</h2>
+      <h2>หมวดค่าใช้จ่าย <span class="tag" id="m-bars-tag">เดือนนี้</span></h2>
       <div id="m-bars"><div class="empty">ยังไม่มีข้อมูล</div></div>
     </div>
 
@@ -439,7 +503,21 @@
     </div>
 
     <div class="card">
-      <h2>รายการล่าสุด <span class="tag" id="m-count"></span></h2>
+      <h2>รายการ <span class="tag" id="m-count"></span></h2>
+      <div class="m-month-nav" id="m-week-nav">
+        <button class="m-nav-btn" id="m-week-prev" aria-label="สัปดาห์ก่อนหน้า">‹</button>
+        <div class="m-month-cur" id="m-week-cur">7 – 13 ก.ค. 2026</div>
+        <button class="m-nav-btn" id="m-week-next" aria-label="สัปดาห์ถัดไป">›</button>
+      </div>
+      <div class="m-range-row">
+        <button class="btn ghost sm" id="m-week-custom-toggle">📅 กำหนดช่วงเอง</button>
+        <button class="btn ghost sm" id="m-week-back" style="display:none">📆 กลับไปดูรายสัปดาห์</button>
+      </div>
+      <div class="m-custom-panel" id="m-week-custom-panel" style="display:none">
+        <label><span>จากวันที่</span><input type="date" id="m-week-from"></label>
+        <label><span>ถึงวันที่</span><input type="date" id="m-week-to"></label>
+        <button class="btn sm" id="m-week-apply">แสดงผล</button>
+      </div>
       <div style="overflow-x:auto"><table>
         <thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวด</th><th>รายการ</th><th class="rt">จำนวน</th><th></th></tr></thead>
         <tbody id="m-rows"></tbody>
@@ -826,30 +904,88 @@
     </div>
 
     <div class="card">
-      <h2>☁️ OneDrive Sync</h2>
+      <h2>☁️ สำรองข้อมูลอัตโนมัติ</h2>
       <div class="od-status" id="od-status">ยังไม่ได้เชื่อมต่อ</div>
-      <label style="display:block; font-size:11px; color:var(--dim); margin-bottom:4px">Application (client) ID จาก Azure</label>
-      <input id="od-clientid" placeholder="เช่น 12345678-abcd-…" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card2); color:var(--ink); margin-bottom:9px">
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        <button class="btn ghost sm" id="od-connect">🔗 เชื่อมต่อ OneDrive</button>
-        <button class="btn ghost sm" id="od-backup">⬆️ สำรองตอนนี้</button>
-        <button class="btn ghost sm" id="od-restore">⬇️ กู้คืนจาก OneDrive</button>
-        <button class="btn ghost sm" id="od-logout" style="display:none">ออกจากระบบ</button>
+
+      <div style="display:flex; gap:8px; margin-bottom:11px">
+        <button class="btn ghost sm od-tab" id="od-tab-webhook" style="flex:1">📗 Google Drive (แนะนำ — ง่ายสุด)</button>
+        <button class="btn ghost sm od-tab" id="od-tab-graph" style="flex:1">🔧 OneDrive (ต้องมี Azure tenant)</button>
       </div>
-      <label style="display:flex; align-items:center; gap:8px; margin-top:11px; font-size:12.5px; color:var(--ink); cursor:pointer">
-        <input type="checkbox" id="od-auto" style="width:16px; height:16px; accent-color:var(--pri)"> สำรองอัตโนมัติทุกครั้งที่มีการบันทึก
-      </label>
-      <div class="hint" id="od-last"></div>
-      <details class="od-help">
-        <summary>วิธีตั้งค่า (ทำครั้งเดียว ~5 นาที)</summary>
-        <ol>
-          <li>ไปที่ <code>portal.azure.com</code> → ค้นหา "App registrations" → New registration (ล็อกอินด้วยบัญชี Microsoft ที่ใช้ OneDrive ได้เลย ฟรี)</li>
-          <li>ตั้งชื่อ เช่น <code>Milk Hub</code> · Supported account types เลือก <b>Personal Microsoft accounts only</b> (หรือแบบรวม All)</li>
-          <li>Redirect URI เลือก platform <b>Single-page application (SPA)</b> แล้วใส่ URL ของเว็บนี้ เช่น <code>https://ชื่อ.github.io/milk-hub/</code></li>
-          <li>กด Register แล้วคัดลอก <b>Application (client) ID</b> มาวางในช่องด้านบน → กดเชื่อมต่อ</li>
-        </ol>
-        ข้อมูลจะถูกเก็บเป็นไฟล์ <code>milk-hub-backup.json</code> ในโฟลเดอร์ Apps/Milk Hub บน OneDrive ของเราเอง (แอปเข้าถึงได้เฉพาะโฟลเดอร์นี้)
-      </details>
+
+      <div id="od-panel-webhook">
+        <label style="display:block; font-size:11px; color:var(--dim); margin-bottom:4px">Backup URL (จาก Google Apps Script หรือ Make.com)</label>
+        <input id="od-webhook" placeholder="เช่น https://script.google.com/macros/s/xxxxx/exec" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card2); color:var(--ink); margin-bottom:9px">
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn ghost sm" id="od-webhook-save">💾 บันทึก URL</button>
+          <button class="btn ghost sm" id="od-webhook-backup">⬆️ สำรองตอนนี้</button>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:11px; font-size:12.5px; color:var(--ink); cursor:pointer">
+          <input type="checkbox" id="od-auto-wh" style="width:16px; height:16px; accent-color:var(--pri)"> สำรองอัตโนมัติทุกครั้งที่มีการบันทึก
+        </label>
+        <div class="hint">โหมดนี้ "กู้คืน" ต้องทำเอง: เปิด Google Drive → โฟลเดอร์ Milk Hub Backup → เปิดไฟล์ล่าสุด → ดาวน์โหลด → มา Import ในการ์ด "สำรอง/ย้ายข้อมูล" ด้านบน</div>
+
+        <details class="od-help" open>
+          <summary>✅ วิธีตั้งค่าด้วย Google Apps Script (แนะนำ — ~5 นาที ไม่ต้องมีตัวกลาง ไม่ติดปัญหา org)</summary>
+          <ol>
+            <li>ไปที่ <code>script.google.com</code> → ล็อกอินด้วย gmail เดิม (<code>milktanawat@gmail.com</code>) → กด <b>New project</b></li>
+            <li>ลบโค้ดเดิมในกล่องทั้งหมดออก แล้ววางโค้ดนี้แทน:</li>
+          </ol>
+          <pre style="background:var(--card2); border-radius:10px; padding:10px; font-size:10.5px; overflow-x:auto; white-space:pre-wrap; word-break:break-all">function doPost(e) {
+  var folderName = "Milk Hub Backup";
+  var fileName = "milk-hub-backup.json";
+  var folders = DriveApp.getFoldersByName(folderName);
+  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+  var old = folder.getFilesByName(fileName);
+  while (old.hasNext()) { old.next().setTrashed(true); }
+  folder.createFile(fileName, e.postData.contents, MimeType.PLAIN_TEXT);
+  return ContentService.createTextOutput("OK");
+}</pre>
+          <ol start="3">
+            <li>ตั้งชื่อโปรเจกต์มุมซ้ายบน เช่น <code>Milk Hub Backup</code> (ไอคอนดินสอ) → กด <b>Save</b> (รูปแผ่นดิสก์)</li>
+            <li>กด <b>Deploy → New deployment</b> → กดไอคอนเฟือง ⚙️ เลือกประเภทเป็น <b>Web app</b></li>
+            <li>ตั้งค่า: Execute as = <b>Me</b> · Who has access = <b>Anyone</b> → กด <b>Deploy</b></li>
+            <li>จะมีหน้าต่างขอสิทธิ์ (Authorize access) → เลือกบัญชี gmail → ถ้าเจอ "Google hasn't verified this app" ให้กด <b>Advanced → Go to Milk Hub Backup (unsafe)</b> → Allow (ปลอดภัย เพราะเราเป็นคนเขียนโค้ดเอง)</li>
+            <li>คัดลอก <b>Web app URL</b> ที่ได้ (ขึ้นต้นด้วย <code>https://script.google.com/macros/s/…/exec</code>) → มาวางในช่องด้านบน → กด "บันทึก URL"</li>
+          </ol>
+          ทุกครั้งที่กด "สำรองตอนนี้" หรือ auto-backup แอปจะส่งข้อมูลตรงไปที่สคริปต์นี้ แล้วมันจะเซฟไฟล์ลง Google Drive ของเราเองทันที — ไม่ผ่านตัวกลางใคร ไม่มีปัญหาบัญชีองค์กรมาบล็อกแน่นอน
+        </details>
+
+        <details class="od-help">
+          <summary>ทางเลือกอื่น: ผ่าน Make.com + OneDrive (ถ้าไม่ติดปัญหา org)</summary>
+          <ol>
+            <li>ไปที่ <code>make.com</code> → Sign up ฟรี</li>
+            <li>สร้าง scenario → โมดูลแรก <b>Webhooks → Custom webhook</b> → คัดลอก URL มาวางช่องด้านบน</li>
+            <li>โมดูลที่ 2: <b>OneDrive → Upload a file</b> → เชื่อมบัญชี Microsoft ส่วนตัว</li>
+            <li>Data ใส่ <code>{{1.body}}</code> (เนื่องจากตอนนี้แอปส่งแบบ text/plain แล้ว ควรเจอ field "body" ตรงๆ ไม่ต้องใช้ toJSON)</li>
+          </ol>
+          ⚠️ ถ้าเน็ตเวิร์กที่ใช้บล็อกบัญชี Microsoft ส่วนตัว (เจอ error "can't sign in with personal account") ให้ใช้ Google Apps Script ด้านบนแทนจะชัวร์กว่ามาก
+        </details>
+      </div>
+
+      <div id="od-panel-graph" style="display:none">
+        <label style="display:block; font-size:11px; color:var(--dim); margin-bottom:4px">Application (client) ID จาก Azure</label>
+        <input id="od-clientid" placeholder="เช่น 12345678-abcd-…" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card2); color:var(--ink); margin-bottom:9px">
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn ghost sm" id="od-connect">🔗 เชื่อมต่อ OneDrive</button>
+          <button class="btn ghost sm" id="od-backup">⬆️ สำรองตอนนี้</button>
+          <button class="btn ghost sm" id="od-restore">⬇️ กู้คืนจาก OneDrive</button>
+          <button class="btn ghost sm" id="od-logout" style="display:none">ออกจากระบบ</button>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:11px; font-size:12.5px; color:var(--ink); cursor:pointer">
+          <input type="checkbox" id="od-auto" style="width:16px; height:16px; accent-color:var(--pri)"> สำรองอัตโนมัติทุกครั้งที่มีการบันทึก
+        </label>
+        <div class="hint" id="od-last"></div>
+        <details class="od-help">
+          <summary>วิธีตั้งค่า (ต้องมี Azure tenant เป็นของตัวเอง)</summary>
+          <ol>
+            <li>ไปที่ <code>portal.azure.com</code> → ค้นหา "App registrations" → New registration</li>
+            <li>ตั้งชื่อ เช่น <code>Milk Hub</code> · Supported account types เลือก <b>Accounts in this organizational directory only</b></li>
+            <li>Redirect URI เลือก platform <b>Single-page application (SPA)</b> แล้วใส่ URL ของเว็บนี้ เช่น <code>https://ชื่อ.github.io/milk-hub/</code></li>
+            <li>กด Register แล้วคัดลอก <b>Application (client) ID</b> มาวางในช่องด้านบน → กดเชื่อมต่อ</li>
+          </ol>
+          ⚠️ ต้องมี directory/tenant ก่อนถึงจะสมัคร App ได้ — ถ้าเจอ error "does not exist in tenant" หรือสมัคร M365 Dev Program ไม่ผ่าน ให้ใช้แท็บ "ผ่าน Make.com" แทนจะง่ายกว่ามาก
+        </details>
+      </div>
     </div>
     <div class="card">
       <h2>📱 ใช้บนมือถือเหมือนแอป</h2>
@@ -969,11 +1105,131 @@ function show(v){
 
 /* ════════ MONEY ════════ */
 async function saveMoney(){ await sSet('money:entries', MONEY); }
+let curMoneyYM = null;   // 'YYYY-MM' — เดือนที่กำลังดูอยู่ในแท็บเงิน
+let moneyViewMode = 'month';   // 'month' | 'custom'
+let listMode = 'week';   // 'week' | 'custom' — สำหรับตาราง "รายการ" แยกจากสรุปด้านบน
+let curWeekStart = null;   // 'YYYY-MM-DD' — วันจันทร์ของสัปดาห์ที่กำลังดู
+let listCustomFrom = null, listCustomTo = null;
+function mondayOf(dstr){
+  const d = new Date(dstr+'T00:00:00');
+  const dow = d.getDay();   // 0=อาทิตย์ .. 6=เสาร์
+  const diff = (dow===0 ? -6 : 1-dow);   // ถอยไปวันจันทร์
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().slice(0,10);
+}
+function shiftDate(dstr, days){
+  const d = new Date(dstr+'T00:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+function listLatestWeekStart(){
+  const dates = MONEY.map(e=>e.date).filter(Boolean).sort();
+  const nowMon = mondayOf(new Date().toISOString().slice(0,10));
+  if(!dates.length) return nowMon;
+  const latestMon = mondayOf(dates[dates.length-1]);
+  return latestMon > nowMon ? latestMon : nowMon;
+}
+function fmtDayShort(iso){ const [,m,d] = iso.split('-'); return parseInt(d) + ' ' + TH_MONTHS[parseInt(m)-1].slice(0,3); }
+let customFrom = null, customTo = null;   // 'YYYY-MM-DD'
+function moneyLatestYM(){
+  const yms = [...new Set(MONEY.map(e=>(e.date||'').slice(0,7)).filter(Boolean))].sort();
+  const nowYm = new Date().toISOString().slice(0,7);
+  return yms.length ? (yms[yms.length-1] > nowYm ? yms[yms.length-1] : nowYm) : nowYm;
+}
+function shiftYM(ym, delta){
+  const [y,m] = ym.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function drawDonut(svgEl, data, totalOverride){
+  const total = totalOverride ?? data.reduce((s,d)=>s+d.value,0);
+  svgEl.innerHTML = '';
+  if(!total){ return; }
+  const cx=60, cy=60, r=46, sw=16;
+  let angle = -90;
+  const ns = 'http://www.w3.org/2000/svg';
+  data.forEach(d=>{
+    const frac = d.value/total;
+    const sweep = frac*360;
+    const large = sweep>180?1:0;
+    const a0 = angle*Math.PI/180, a1 = (angle+sweep)*Math.PI/180;
+    const x0 = cx+r*Math.cos(a0), y0 = cy+r*Math.sin(a0);
+    const x1 = cx+r*Math.cos(a1), y1 = cy+r*Math.sin(a1);
+    const path = document.createElementNS(ns,'path');
+    if(frac>=0.999){
+      const circle = document.createElementNS(ns,'circle');
+      circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',r);
+      circle.setAttribute('fill','none'); circle.setAttribute('stroke',d.color); circle.setAttribute('stroke-width',sw);
+      svgEl.appendChild(circle);
+    } else {
+      path.setAttribute('d', `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`);
+      path.setAttribute('fill','none'); path.setAttribute('stroke',d.color); path.setAttribute('stroke-width',sw);
+      path.setAttribute('stroke-linecap', data.length>1?'butt':'round');
+      svgEl.appendChild(path);
+    }
+    angle += sweep;
+  });
+}
+function drawTrendSvg(svgEl, months, incArr, exArr){
+  svgEl.innerHTML = '';
+  const ns='http://www.w3.org/2000/svg';
+  const W=280,H=150,padL=6,padR=6,padT=14,padB=22;
+  const max = Math.max(1, ...incArr, ...exArr);
+  const stepX = (W-padL-padR) / Math.max(1, months.length-1);
+  const toY = v => H-padB - (v/max)*(H-padT-padB);
+  const mkLine = (arr,color) => {
+    const pts = arr.map((v,i)=>`${(padL+i*stepX).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+    const pl = document.createElementNS(ns,'polyline');
+    pl.setAttribute('points',pts); pl.setAttribute('fill','none'); pl.setAttribute('stroke',color);
+    pl.setAttribute('stroke-width','2.5'); pl.setAttribute('stroke-linecap','round'); pl.setAttribute('stroke-linejoin','round');
+    svgEl.appendChild(pl);
+    arr.forEach((v,i)=>{
+      const c = document.createElementNS(ns,'circle');
+      c.setAttribute('cx',(padL+i*stepX).toFixed(1)); c.setAttribute('cy',toY(v).toFixed(1)); c.setAttribute('r','3');
+      c.setAttribute('fill',color);
+      svgEl.appendChild(c);
+    });
+  };
+  mkLine(incArr, 'var(--green)'.startsWith('var')? '#12A97C':'#12A97C');
+  mkLine(exArr, '#EA4D67');
+  months.forEach((ym,i)=>{
+    const [,mo] = ym.split('-');
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x',(padL+i*stepX).toFixed(1)); t.setAttribute('y', H-6); t.setAttribute('font-size','9');
+    t.setAttribute('fill','var(--dim)'); t.setAttribute('text-anchor', i===0?'start':(i===months.length-1?'end':'middle'));
+    t.textContent = TH_MONTHS[parseInt(mo)-1].slice(0,3);
+    svgEl.appendChild(t);
+  });
+}
+function fmtThaiDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${parseInt(d)} ${TH_MONTHS[parseInt(m)-1].slice(0,3)} ${y}`;
+}
 function renderMoney(){
-  const now = new Date();
-  const ym = now.toISOString().slice(0,7);
-  document.getElementById('m-month-lb').textContent = TH_MONTHS[now.getMonth()] + ' · รายรับ';
-  const monthE = MONEY.filter(e=>(e.date||'').startsWith(ym));
+  if(!curMoneyYM) curMoneyYM = moneyLatestYM();
+  const isCustom = moneyViewMode==='custom' && customFrom && customTo;
+  document.getElementById('m-month-nav').style.display = isCustom ? 'none' : 'flex';
+  document.getElementById('m-custom-toggle').style.display = isCustom ? 'none' : '';
+  document.getElementById('m-back-to-month').style.display = isCustom ? '' : 'none';
+
+  let monthE, periodTxt, anchorYm;
+  if(isCustom){
+    monthE = MONEY.filter(e=>e.date && e.date>=customFrom && e.date<=customTo);
+    periodTxt = fmtThaiDate(customFrom) + ' – ' + fmtThaiDate(customTo);
+    anchorYm = customTo.slice(0,7);
+  } else {
+    const ym = curMoneyYM;
+    const [yy,mm] = ym.split('-');
+    document.getElementById('m-month-cur').textContent = TH_MONTHS[parseInt(mm)-1] + ' ' + yy;
+    document.getElementById('m-month-next').disabled = (ym >= moneyLatestYM());
+    monthE = MONEY.filter(e=>(e.date||'').startsWith(ym));
+    periodTxt = TH_MONTHS[parseInt(mm)-1] + ' ' + yy;
+    anchorYm = ym;
+  }
+  document.getElementById('m-month-lb').textContent = 'รายรับ';
+  document.getElementById('m-donut-tag').textContent = periodTxt;
+  document.getElementById('m-bars-tag').textContent = periodTxt;
   const inc = monthE.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
   const exp = monthE.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
   document.getElementById('m-in').textContent = fmt(inc);
@@ -986,18 +1242,49 @@ function renderMoney(){
   monthE.filter(e=>e.type==='expense').forEach(e=>{ cats[e.category||'อื่นๆ'] = (cats[e.category||'อื่นๆ']||0)+e.amount; });
   const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
   const barBox = document.getElementById('m-bars');
-  if(!entries.length){ barBox.innerHTML = '<div class="empty">ยังไม่มีรายจ่ายเดือนนี้</div>'; }
+  const colors = ['#6C5CE7','#F0980F','#3E8EF0','#12A97C','#EA4D67','#FF9F68','#25C6DE','#F97FB5'];
+  if(!entries.length){ barBox.innerHTML = '<div class="empty">ยังไม่มีรายจ่ายในช่วงนี้</div>'; }
   else{
     const max = entries[0][1];
-    const colors = ['#EA4D67','#F0980F','#3E8EF0','#12A97C','#6C5CE7','#FF9F68','#25C6DE','#F97FB5'];
     barBox.innerHTML = entries.map(([c,v],i)=>`
       <div class="bar-row"><div class="bl">${esc(c)}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${(v/max*100).toFixed(1)}%;background:${colors[i%colors.length]}"></div></div>
         <div class="bv num">${fmt(v)}</div></div>`).join('');
   }
 
-  const rows = [...MONEY].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,40);
-  document.getElementById('m-count').textContent = MONEY.length + ' รายการทั้งหมด';
+  // donut
+  const donutData = entries.slice(0,8).map(([c,v],i)=>({label:c, value:v, color:colors[i%colors.length]}));
+  drawDonut(document.getElementById('m-donut-svg'), donutData);
+  document.getElementById('m-donut-total').textContent = fmt(exp);
+  document.getElementById('m-donut-legend').innerHTML = donutData.length ? donutData.map(d=>
+    `<span><i style="background:${d.color}"></i>${esc(d.label)} <b>${(d.value/exp*100).toFixed(0)}%</b></span>`).join('') : '<span class="empty">ยังไม่มีข้อมูล</span>';
+
+  // trend — 6 เดือนย้อนหลังจาก anchor (เดือนที่เลือก หรือเดือนสุดท้ายของช่วงกำหนดเอง)
+  const trendMonths = []; for(let i=5;i>=0;i--) trendMonths.push(shiftYM(anchorYm,-i));
+  const incArr = trendMonths.map(m=>MONEY.filter(e=>e.type==='income' && (e.date||'').startsWith(m)).reduce((s,e)=>s+e.amount,0));
+  const exArr = trendMonths.map(m=>MONEY.filter(e=>e.type==='expense' && (e.date||'').startsWith(m)).reduce((s,e)=>s+e.amount,0));
+  drawTrendSvg(document.getElementById('m-trend-svg'), trendMonths, incArr, exArr);
+
+  const isListCustom = listMode==='custom' && listCustomFrom && listCustomTo;
+  document.getElementById('m-week-nav').style.display = isListCustom ? 'none' : 'flex';
+  document.getElementById('m-week-custom-toggle').style.display = isListCustom ? 'none' : '';
+  document.getElementById('m-week-back').style.display = isListCustom ? '' : 'none';
+
+  let listE, listTxt;
+  if(isListCustom){
+    listE = MONEY.filter(e=>e.date && e.date>=listCustomFrom && e.date<=listCustomTo);
+    listTxt = fmtThaiDate(listCustomFrom) + ' – ' + fmtThaiDate(listCustomTo);
+  } else {
+    if(!curWeekStart) curWeekStart = listLatestWeekStart();
+    const weekEnd = shiftDate(curWeekStart, 6);
+    listE = MONEY.filter(e=>e.date && e.date>=curWeekStart && e.date<=weekEnd);
+    listTxt = fmtDayShort(curWeekStart) + ' – ' + fmtDayShort(weekEnd);
+    document.getElementById('m-week-cur').textContent = listTxt;
+    document.getElementById('m-week-next').disabled = (mondayOf(new Date().toISOString().slice(0,10)) <= curWeekStart) && (listLatestWeekStart() <= curWeekStart);
+  }
+
+  const rows = listE.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('m-count').textContent = rows.length + ' รายการ · ' + listTxt;
   document.getElementById('m-rows').innerHTML = rows.length ? rows.map(e=>`
     <tr><td class="num" contenteditable data-ed="date" data-store="money" data-rid="${e.id}">${e.date||'-'}</td>
       <td><span class="pill clickable ${e.type==='income'?'in':'ex'}" data-toggletype="${e.id}">${e.type==='income'?'รับ':'จ่าย'}</span></td>
@@ -1005,7 +1292,7 @@ function renderMoney(){
       <td contenteditable data-ed="item" data-store="money" data-rid="${e.id}">${esc(e.item||'')}</td>
       <td class="rt num ${e.type==='income'?'g':'r'}" contenteditable data-ed="amount" data-num data-store="money" data-rid="${e.id}">${e.amount}</td>
       <td><button class="del" data-mdel="${e.id}">✕</button></td></tr>`).join('')
-    : '<tr><td colspan="6" class="empty">ยังไม่มีรายการ</td></tr>';
+    : '<tr><td colspan="6" class="empty">ไม่มีรายการในช่วงนี้</td></tr>';
   document.querySelectorAll('[data-mdel]').forEach(b=>b.onclick = async()=>{
     MONEY = MONEY.filter(x=>x.id!==b.dataset.mdel); await saveMoney(); renderMoney(); renderHome();
   });
@@ -1015,6 +1302,67 @@ function renderMoney(){
 
   renderMoneyAnalysis();
 }
+document.getElementById('m-month-prev').onclick = ()=>{ curMoneyYM = shiftYM(curMoneyYM, -1); renderMoney(); };
+document.getElementById('m-month-next').onclick = ()=>{ if(curMoneyYM < moneyLatestYM()){ curMoneyYM = shiftYM(curMoneyYM, 1); renderMoney(); } };
+document.getElementById('m-custom-toggle').onclick = ()=>{
+  const panel = document.getElementById('m-custom-panel');
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'flex';
+  if(!open){
+    const ym = curMoneyYM || moneyLatestYM();
+    const [yy,mm] = ym.split('-');
+    const first = `${yy}-${mm}-01`;
+    const last = new Date(parseInt(yy), parseInt(mm), 0).toISOString().slice(0,10);
+    if(!document.getElementById('m-custom-from').value) document.getElementById('m-custom-from').value = first;
+    if(!document.getElementById('m-custom-to').value) document.getElementById('m-custom-to').value = last;
+  }
+};
+document.getElementById('m-custom-apply').onclick = ()=>{
+  const from = document.getElementById('m-custom-from').value;
+  const to = document.getElementById('m-custom-to').value;
+  if(!from || !to){ toast('เลือกวันที่ให้ครบทั้งสองช่อง'); return; }
+  if(from > to){ toast('วันที่เริ่มต้องมาก่อนวันที่สิ้นสุด'); return; }
+  customFrom = from; customTo = to; moneyViewMode = 'custom';
+  document.getElementById('m-custom-panel').style.display = 'none';
+  renderMoney();
+};
+document.getElementById('m-back-to-month').onclick = ()=>{
+  moneyViewMode = 'month';
+  document.getElementById('m-custom-panel').style.display = 'none';
+  renderMoney();
+};
+document.getElementById('m-week-prev').onclick = ()=>{ curWeekStart = shiftDate(curWeekStart || listLatestWeekStart(), -7); renderMoney(); };
+document.getElementById('m-week-next').onclick = ()=>{
+  const next = shiftDate(curWeekStart || listLatestWeekStart(), 7);
+  const capMon = mondayOf(new Date().toISOString().slice(0,10));
+  const latestMon = listLatestWeekStart();
+  const cap = latestMon > capMon ? latestMon : capMon;
+  if(next <= cap){ curWeekStart = next; renderMoney(); }
+};
+document.getElementById('m-week-custom-toggle').onclick = ()=>{
+  const panel = document.getElementById('m-week-custom-panel');
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'flex';
+  if(!open){
+    const ws = curWeekStart || listLatestWeekStart();
+    if(!document.getElementById('m-week-from').value) document.getElementById('m-week-from').value = ws;
+    if(!document.getElementById('m-week-to').value) document.getElementById('m-week-to').value = shiftDate(ws,6);
+  }
+};
+document.getElementById('m-week-apply').onclick = ()=>{
+  const from = document.getElementById('m-week-from').value;
+  const to = document.getElementById('m-week-to').value;
+  if(!from || !to){ toast('เลือกวันที่ให้ครบทั้งสองช่อง'); return; }
+  if(from > to){ toast('วันที่เริ่มต้องมาก่อนวันที่สิ้นสุด'); return; }
+  listCustomFrom = from; listCustomTo = to; listMode = 'custom';
+  document.getElementById('m-week-custom-panel').style.display = 'none';
+  renderMoney();
+};
+document.getElementById('m-week-back').onclick = ()=>{
+  listMode = 'week';
+  document.getElementById('m-week-custom-panel').style.display = 'none';
+  renderMoney();
+};
 
 const CATEGORY_TAGS = {
   'อาหาร & เครื่องดื่ม':'need', 'ที่อยู่อาศัย & สาธารณูปโภค':'need', 'ซอฟต์แวร์รายเดือน':'need',
@@ -3011,6 +3359,17 @@ async function odGetToken(interactive){
 function odBackupPayload(){
   return JSON.stringify({money:MONEY, tax:TAX, assets:ASSETS, goals:GOALS, health:HEALTH, exported:new Date().toISOString()});
 }
+async function odWebhookUpload(interactive){
+  if(!odConfig.webhookUrl){ if(interactive) toast('ใส่ Webhook URL ก่อน (ดูวิธีตั้งค่าด้านล่าง)'); return false; }
+  odSetStatus('on','กำลังส่งข้อมูล…');
+  try{
+    const res = await fetch(odConfig.webhookUrl, { method:'POST', body: odBackupPayload() });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    odConfig.lastSync = new Date().toISOString(); await odSaveConfig(); odSetLast();
+    odSetStatus('on','เชื่อมต่อแล้ว');
+    return true;
+  }catch(e){ console.error(e); odSetStatus('err','ส่งไม่สำเร็จ — เช็ค URL หรือลองใหม่'); return false; }
+}
 async function odUpload(interactive){
   if(!odConfig.clientId){ toast('ใส่ Client ID ก่อน (ดูวิธีตั้งค่าด้านล่าง)'); return false; }
   const token = await odGetToken(interactive); if(!token){ if(interactive) odSetStatus('err','เชื่อมต่อไม่สำเร็จ'); return false; }
@@ -3047,17 +3406,44 @@ async function odRestore(){
   }catch(e){ console.error(e); odSetStatus('err','กู้คืนไม่สำเร็จ'); }
 }
 window.odScheduleSync = function(){
-  if(!odConfig.auto || !odConfig.clientId) return;
+  if(!odConfig.auto) return;
+  if(odConfig.mode==='webhook' && !odConfig.webhookUrl) return;
+  if(odConfig.mode!=='webhook' && !odConfig.clientId) return;
   clearTimeout(odSyncTimer);
-  odSyncTimer = setTimeout(()=>odUpload(false), 8000);   // รอ 8 วิหลังการแก้ไขครั้งสุดท้าย
+  odSyncTimer = setTimeout(()=>{ odConfig.mode==='webhook' ? odWebhookUpload(false) : odUpload(false); }, 8000);   // รอ 8 วิหลังการแก้ไขครั้งสุดท้าย
 };
+function odShowTab(mode){
+  document.getElementById('od-panel-webhook').style.display = mode==='webhook' ? '' : 'none';
+  document.getElementById('od-panel-graph').style.display = mode==='graph' ? '' : 'none';
+  document.getElementById('od-tab-webhook').style.background = mode==='webhook' ? 'var(--pri-soft)' : '';
+  document.getElementById('od-tab-graph').style.background = mode==='graph' ? 'var(--pri-soft)' : '';
+}
 async function odInitUI(){
   odConfig = await sGet(OD_KEY, {});
+  if(!odConfig.mode) odConfig.mode = 'webhook';
   document.getElementById('od-clientid').value = odConfig.clientId || '';
+  document.getElementById('od-webhook').value = odConfig.webhookUrl || '';
   document.getElementById('od-auto').checked = !!odConfig.auto;
+  document.getElementById('od-auto-wh').checked = !!odConfig.auto;
   odSetLast();
+  odShowTab(odConfig.mode);
+  document.getElementById('od-tab-webhook').onclick = async ()=>{ odConfig.mode='webhook'; await odSaveConfig(); odShowTab('webhook'); odSetStatus(odConfig.webhookUrl?'on':'', odConfig.webhookUrl?'เชื่อมต่อแล้ว':'ยังไม่ได้เชื่อมต่อ'); };
+  document.getElementById('od-tab-graph').onclick = async ()=>{ odConfig.mode='graph'; await odSaveConfig(); odShowTab('graph'); odSetStatus('','ยังไม่ได้เชื่อมต่อ'); };
+
   document.getElementById('od-clientid').onchange = async e=>{ odConfig.clientId = e.target.value.trim(); odMsal=null; await odSaveConfig(); };
-  document.getElementById('od-auto').onchange = async e=>{ odConfig.auto = e.target.checked; await odSaveConfig(); if(e.target.checked) window.odScheduleSync(); };
+  document.getElementById('od-auto').onchange = async e=>{ odConfig.auto = e.target.checked; document.getElementById('od-auto-wh').checked = e.target.checked; await odSaveConfig(); if(e.target.checked) window.odScheduleSync(); };
+  document.getElementById('od-auto-wh').onchange = async e=>{ odConfig.auto = e.target.checked; document.getElementById('od-auto').checked = e.target.checked; await odSaveConfig(); if(e.target.checked) window.odScheduleSync(); };
+
+  document.getElementById('od-webhook-save').onclick = async ()=>{
+    odConfig.webhookUrl = document.getElementById('od-webhook').value.trim();
+    if(!odConfig.webhookUrl){ toast('ใส่ Webhook URL ก่อน'); return; }
+    await odSaveConfig(); odSetStatus('on','เชื่อมต่อแล้ว'); toast('✓ บันทึก Webhook URL แล้ว');
+  };
+  document.getElementById('od-webhook-backup').onclick = async ()=>{
+    odConfig.webhookUrl = document.getElementById('od-webhook').value.trim(); await odSaveConfig();
+    if(await odWebhookUpload(true)) toast('✓ ส่งข้อมูลสำรองแล้ว');
+  };
+
   document.getElementById('od-connect').onclick = async ()=>{
     odConfig.clientId = document.getElementById('od-clientid').value.trim();
     if(!odConfig.clientId){ toast('ใส่ Client ID ก่อน'); return; }
@@ -3071,11 +3457,13 @@ async function odInitUI(){
     if(odMsal){ const m = odMsal; await m.initialize(); const acc = m.getAllAccounts()[0]; if(acc) await m.logoutPopup({account:acc}).catch(()=>{}); }
     odAccount = null; odSetStatus('','ยังไม่ได้เชื่อมต่อ'); document.getElementById('od-logout').style.display='none';
   };
-  // ถ้ามี clientId อยู่แล้ว ลองต่อแบบเงียบ
-  if(odConfig.clientId){
+  // ถ้ามี clientId อยู่แล้ว (โหมด graph) ลองต่อแบบเงียบ
+  if(odConfig.mode==='graph' && odConfig.clientId){
     const token = await odGetToken(false);
     if(token){ odSetStatus('on','เชื่อมต่อแล้ว' + (odAccount ? ' · '+odAccount.username : '')); document.getElementById('od-logout').style.display=''; }
     else odSetStatus('','มี Client ID แล้ว — กดเชื่อมต่อเพื่อล็อกอิน');
+  } else if(odConfig.mode==='webhook' && odConfig.webhookUrl){
+    odSetStatus('on','เชื่อมต่อแล้ว');
   }
 }
 
