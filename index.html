@@ -2338,6 +2338,40 @@ function openModalImg(key){
   } else { body.innerHTML = `<img src="${f.dataUrl}">`; }
   document.getElementById('modal').classList.add('on');
 }
+function openPvdConvert(gid){
+  const g = GOALS.items.find(x=>x.id===gid); if(!g) return;
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `
+    <div style="background:var(--card); border-radius:16px; padding:18px; width:min(360px,86vw); text-align:left">
+      <h2 style="font-size:14.5px; margin-bottom:11px">🔁 ตั้งเป้าหมายนี้เป็นโหมด PVD</h2>
+      <div class="hint" style="margin-bottom:11px">แปลง "${esc(g.name||'เป้าหมายนี้')}" ให้ตารางรายปีเป็น % พนักงาน + % นายจ้าง (สมทบตามเงินเดือน) แทนจำนวนเงินบาทตรงๆ</div>
+      <div class="frm" style="grid-template-columns:1fr; gap:9px">
+        <label><span>เงินเดือนฐาน (บาท/เดือน)</span><input type="number" id="pvdc-salary" step="1" value="${g.pvdSalary||''}" placeholder="เช่น 45000"></label>
+        <label><span>% ที่เราสมทบ (พนักงาน)</span><input type="number" id="pvdc-emp" step="0.5" value="${g.pvdEmpPct||''}" placeholder="เช่น 5"></label>
+        <label><span>% ที่นายจ้างสมทบ</span><input type="number" id="pvdc-employer" step="0.5" value="${g.pvdEmployerPct||''}" placeholder="เช่น 10"></label>
+        <label><span>เงินเดือนคาดว่าขึ้น (%/ปี)</span><input type="number" id="pvdc-raise" step="0.5" value="${g.pvdSalaryRaise!=null?g.pvdSalaryRaise:''}" placeholder="เช่น 3"></label>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:14px">
+        <button class="btn ghost sm" id="pvdc-cancel" style="flex:1">ยกเลิก</button>
+        <button class="btn sm" id="pvdc-save" style="flex:1">บันทึก</button>
+      </div>
+    </div>`;
+  document.getElementById('modal').classList.add('on');
+  document.getElementById('pvdc-cancel').onclick = ()=>document.getElementById('modal').classList.remove('on');
+  document.getElementById('pvdc-save').onclick = async ()=>{
+    const salary = parseFloat(document.getElementById('pvdc-salary').value);
+    const emp = parseFloat(document.getElementById('pvdc-emp').value);
+    const employer = parseFloat(document.getElementById('pvdc-employer').value);
+    const raise = parseFloat(document.getElementById('pvdc-raise').value) || 0;
+    if(!salary || isNaN(emp) || isNaN(employer)){ toast('ใส่เงินเดือนฐานและ % ทั้งสองฝั่งก่อน'); return; }
+    g.pvdMode = true;
+    g.pvdSalary = salary; g.pvdEmpPct = emp; g.pvdEmployerPct = employer; g.pvdSalaryRaise = raise;
+    await saveGoals();
+    document.getElementById('modal').classList.remove('on');
+    renderGoals();
+    toast(`✓ ตั้งเป็นโหมด PVD แล้ว — ตารางรายปีตอนนี้เป็น % พนักงาน (${emp}%) + % นายจ้าง (${employer}%)`);
+  };
+}
 document.getElementById('m-close').onclick = ()=>document.getElementById('modal').classList.remove('on');
 document.getElementById('modal').onclick = e=>{ if(e.target.id==='modal') e.currentTarget.classList.remove('on'); };
 
@@ -3094,6 +3128,7 @@ function renderGoalCardHtml(g, i){
       <h2 style="font-size:12.5px">${g.pvdMode ? '📅 ปรับ % พนักงาน/นายจ้างรายปี' : '📅 ปีนี้ลงทุนเท่านี้ ปีหน้าลงทุน/ปันผลเท่าไหร่'} <span class="tag">ไม่บังคับ</span></h2>
       <button class="btn ghost sm" data-gsched="${g.id}">${expandedYearSched.has(g.id) ? '▲ ซ่อน' : '▼ ตั้งค่ารายปี'}</button>
     </div>
+    ${(!g.pvdMode) ? `<div class="hint" style="margin-top:-4px">💡 ถ้าเป้าหมายนี้คือ PVD/กองทุนสำรองเลี้ยงชีพ (สมทบเป็น % เงินเดือนทั้งฝั่งเราและนายจ้าง) <button type="button" data-pvdconvert="${g.id}" style="background:none;border:none;color:var(--pri);font-weight:700;font-family:inherit;font-size:11.5px;cursor:pointer;text-decoration:underline">กดตั้งเป็นโหมด PVD (%)</button> เพื่อให้ตารางรายปีด้านล่างเป็น % พนักงาน/% นายจ้าง แทนจำนวนเงินบาท</div>` : ''}
     <div class="g-yearsched" id="g-yearsched-${g.id}" style="${expandedYearSched.has(g.id)?'':'display:none'}">
       ${renderYearScheduleRows(g, yearsLeft)}
       <div class="g-yearsched-actions"><button class="btn ghost sm" data-gschedreset="${g.id}">↺ ล้างค่าที่ปรับทั้งหมด</button></div>
@@ -3185,6 +3220,7 @@ function renderGoals(){
     if(expandedYearSched.has(id)) expandedYearSched.delete(id); else expandedYearSched.add(id);
     renderGoals();
   });
+  document.querySelectorAll('[data-pvdconvert]').forEach(b=>b.onclick=()=>openPvdConvert(b.dataset.pvdconvert));
   document.querySelectorAll('[data-gschedreset]').forEach(b=>b.onclick=async ()=>{
     const id = b.dataset.gschedreset;
     const g = GOALS.items.find(x=>x.id===id); if(!g) return;
