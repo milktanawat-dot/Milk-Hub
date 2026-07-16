@@ -484,21 +484,6 @@
       <div id="m-bars"><div class="empty">ยังไม่มีข้อมูล</div></div>
     </div>
 
-    <div class="card">
-      <h2>🏷️ จัดการหมวดหมู่ <span class="tag">ใช้ทุกเดือน/ปี</span></h2>
-      <div class="hint" style="margin-bottom:11px">เพิ่มหมวดใหม่พร้อมคำค้น ระบบจะปรับรายการเก่าที่ตรงคำค้นให้เป็นหมวดนี้ทันที และจำไว้ใช้เดารายการใหม่ในอนาคตด้วย</div>
-      <div id="cat-mgr-list" style="display:flex; flex-direction:column; gap:7px; margin-bottom:11px"></div>
-      <button class="btn ghost sm" id="cat-mgr-add">➕ เพิ่มหมวดหมู่ใหม่</button>
-      <div id="cat-mgr-editor" class="m-custom-panel" style="display:none; flex-direction:column; align-items:stretch; margin-top:11px">
-        <input id="cm-name" placeholder="ชื่อหมวดหมู่ เช่น ค่าเลี้ยงดูลูก" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); margin-bottom:9px">
-        <textarea id="cm-keywords" rows="2" placeholder="คำค้น คั่นด้วยจุลภาค เช่น ค่านม, ค่าเทอม, ของเล่น" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); margin-bottom:9px; resize:vertical"></textarea>
-        <div style="display:flex; gap:8px">
-          <button class="btn ghost sm" id="cm-cancel" style="flex:1">ยกเลิก</button>
-          <button class="btn sm" id="cm-save" style="flex:1">บันทึกหมวดหมู่</button>
-        </div>
-      </div>
-    </div>
-
     <div class="grid2">
       <div class="card">
         <h2>🏥 สุขภาพการเงิน <span class="tag">สะสมทั้งหมด</span></h2>
@@ -547,6 +532,23 @@
         <thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวด</th><th>รายการ</th><th class="rt">จำนวน</th><th></th></tr></thead>
         <tbody id="m-rows"></tbody>
       </table></div>
+    </div>
+
+    <div class="card">
+      <h2 id="cat-mgr-toggle" style="cursor:pointer; user-select:none">🏷️ จัดการหมวดหมู่ <span class="tag">ใช้ทุกเดือน/ปี</span><span id="cat-mgr-chevron" style="margin-left:auto; font-size:12px; color:var(--dim)">▾ ขยาย</span></h2>
+      <div id="cat-mgr-body" style="display:none; margin-top:11px">
+        <div class="hint" style="margin-bottom:11px">เพิ่มหมวดใหม่พร้อมคำค้น ระบบจะปรับรายการเก่าที่ตรงคำค้นให้เป็นหมวดนี้ทันที และจำไว้ใช้เดารายการใหม่ในอนาคตด้วย</div>
+        <div id="cat-mgr-list" style="display:flex; flex-direction:column; gap:7px; margin-bottom:11px"></div>
+        <button class="btn ghost sm" id="cat-mgr-add">➕ เพิ่มหมวดหมู่ใหม่</button>
+        <div id="cat-mgr-editor" class="m-custom-panel" style="display:none; flex-direction:column; align-items:stretch; margin-top:11px">
+          <input id="cm-name" placeholder="ชื่อหมวดหมู่ เช่น ค่าเลี้ยงดูลูก" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); margin-bottom:9px">
+          <textarea id="cm-keywords" rows="2" placeholder="คำค้น คั่นด้วยจุลภาค เช่น ค่านม, ค่าเทอม, ของเล่น" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); margin-bottom:9px; resize:vertical"></textarea>
+          <div style="display:flex; gap:8px">
+            <button class="btn ghost sm" id="cm-cancel" style="flex:1">ยกเลิก</button>
+            <button class="btn sm" id="cm-save" style="flex:1">บันทึกหมวดหมู่</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -661,12 +663,15 @@
       </div>
       <div style="display:flex; gap:9px; align-items:center; flex-wrap:wrap">
         <button class="btn" id="a-add">บันทึก</button>
+        <button class="btn ghost sm" onclick="document.getElementById('a-ocr-file').click()">📎 แนบรูปให้ระบบอ่าน</button>
+        <input type="file" id="a-ocr-file" accept="image/*" style="display:none">
+        <span id="a-ocr-status" style="font-size:11.5px;color:var(--dim)"></span>
         <label style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)">
           อัตรา USD→THB <input type="number" id="a-fx" step="0.01" style="width:84px">
         </label>
         <button class="btn ghost sm" id="a-fx-refresh">🔄 ดึงอัตราแลกเปลี่ยน</button>
       </div>
-      <div class="hint">ใส่ชื่อซ้ำ = อัปเดตรายการเดิม (เช่นหลัง DCA) · คลิกตัวเลข/ชื่อในการ์ดด้านล่างเพื่อแก้ไขได้เลย</div>
+      <div class="hint">ใส่ชื่อซ้ำ = อัปเดตรายการเดิม (เช่นหลัง DCA) · คลิกตัวเลข/ชื่อในการ์ดด้านล่างเพื่อแก้ไขได้เลย<br>📸 แคปหน้าจอแอปลงทุน (เช่น Dime, กระดานหุ้น) แล้วกด "แนบรูปให้ระบบอ่าน" ระบบจะอ่านชื่อ/จำนวนหน่วย/ต้นทุน/ราคาปัจจุบันให้ — เช็คให้ตรงก่อนกดบันทึกเสมอ</div>
     </div>
 
     <div class="card">
@@ -1785,6 +1790,30 @@ document.getElementById('a-add').onclick = async ()=>{
   ['a-name','a-units','a-cost','a-price'].forEach(i=>document.getElementById(i).value='');
   renderAssets(); renderHome(); toast(existing ? '✓ อัปเดตแล้ว' : '✓ เพิ่มแล้ว');
 };
+/* ── OCR: แคปหน้าจอแอปลงทุน (Dime, กระดานหุ้น ฯลฯ) → เติมฟอร์มเพิ่ม/อัปเดตทรัพย์สิน ── */
+document.getElementById('a-ocr-file').onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return; e.target.value='';
+  const text = await runOcr(f, 'a-ocr-status'); if(!text) return;
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const units = findNearNumber(lines, ['จำนวนหน่วย','จำนวน','หน่วย','shares','units','qty','quantity','ปริมาณ']);
+  const cost = findNearNumber(lines, ['ต้นทุนเฉลี่ย','ต้นทุนต่อหน่วย','ราคาต้นทุน','ต้นทุน','avg cost','average cost','cost/share','cost price']);
+  const price = findNearNumber(lines, ['ราคาปัจจุบัน','ราคาล่าสุด','ราคาตลาด','current price','market price','last price','ราคา']);
+  const value = findNearNumber(lines, ['มูลค่ารวม','มูลค่า','market value','total value','valuation']);
+  // เดาชื่อ/สัญลักษณ์: หาโทเค็นตัวพิมพ์ใหญ่ล้วน 2-6 ตัวอักษรที่ไม่ใช่คำศัพท์การเงินทั่วไป
+  const skipWords = new Set(['THB','USD','ETF','NAV','SET','SET50','DCA']);
+  let nameGuess = null;
+  for(const l of lines){
+    const m = l.match(/\b[A-Z]{2,6}\b/);
+    if(m && !skipWords.has(m[0])){ nameGuess = m[0]; break; }
+  }
+  let filled = [];
+  if(nameGuess && !document.getElementById('a-name').value){ document.getElementById('a-name').value = nameGuess; filled.push('ชื่อ '+nameGuess); }
+  if(units!==null){ document.getElementById('a-units').value = units; filled.push('จำนวน '+units); }
+  if(cost!==null){ document.getElementById('a-cost').value = cost; filled.push('ต้นทุน '+cost); }
+  if(price!==null){ document.getElementById('a-price').value = price; filled.push('ราคา '+price); }
+  else if(value!==null && units){ document.getElementById('a-price').value = (value/units).toFixed(2); filled.push('ราคา(คำนวณจากมูลค่า) '+(value/units).toFixed(2)); }
+  toast(filled.length ? `✓ อ่านได้: ${filled.join(' · ')} — เช็คให้ตรงก่อนกดบันทึก` : '⚠️ อ่านตัวเลขไม่ได้ ลองกรอกเองหรือถ่ายรูปให้ชัดกว่านี้');
+};
 document.getElementById('a-fx').onchange = async e=>{
   ASSETS.fx = parseFloat(e.target.value)||34; await saveAssets(); renderAssets(); renderHome();
 };
@@ -1896,7 +1925,15 @@ function openCategoryEditor(name){
   document.getElementById('cat-mgr-editor').style.display = 'flex';
   document.getElementById('cm-name').dataset.editingOriginal = existing ? existing.name : '';
 }
+document.getElementById('cat-mgr-toggle').onclick = ()=>{
+  const body = document.getElementById('cat-mgr-body');
+  const chev = document.getElementById('cat-mgr-chevron');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  chev.textContent = open ? '▾ ขยาย' : '▴ ย่อ';
+};
 document.getElementById('cat-mgr-add').onclick = ()=>openCategoryEditor(null);
+
 document.getElementById('cm-cancel').onclick = ()=>{ document.getElementById('cat-mgr-editor').style.display='none'; };
 document.getElementById('cm-save').onclick = async ()=>{
   const name = document.getElementById('cm-name').value.trim();
