@@ -93,6 +93,10 @@
   .m-nav-btn:disabled{opacity:.35; cursor:default;}
   .m-month-cur{font-size:14.5px; font-weight:800; min-width:130px; text-align:center;}
   .m-range-row{display:flex; justify-content:center; gap:9px; margin-bottom:11px;}
+  .m-mode-tabs{display:flex; gap:7px; justify-content:center; margin-bottom:10px;}
+  .m-mode-btn{border:1px solid var(--line); background:var(--card2); color:var(--dim); border-radius:99px;
+    padding:6px 14px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;}
+  .m-mode-btn.on{background:linear-gradient(135deg,var(--pri),var(--pri2)); color:#fff; border-color:transparent;}
   .m-custom-panel{display:flex; align-items:flex-end; gap:9px; flex-wrap:wrap; background:var(--card2);
     border-radius:14px; padding:11px 12px; margin-bottom:13px;}
   .m-custom-panel label{flex:1; min-width:120px;}
@@ -433,14 +437,20 @@
       <div class="hint">OCR อ่านตัวเลข/วันที่จากรูปแล้วเติมในฟอร์มด้านบนให้อัตโนมัติ — เช็คความถูกต้องก่อนกด "บันทึก" เสมอ (ความแม่นยำขึ้นกับความคมชัดของรูป) · รองรับเฉพาะไฟล์รูปภาพ</div>
     </div>
 
+    <div class="m-mode-tabs">
+      <button class="m-mode-btn on" id="m-mode-month">🗓️ เดือน</button>
+      <button class="m-mode-btn" id="m-mode-year">📆 ปี</button>
+      <button class="m-mode-btn" id="m-mode-custom">📅 กำหนดเอง</button>
+    </div>
     <div class="m-month-nav" id="m-month-nav">
       <button class="m-nav-btn" id="m-month-prev" aria-label="เดือนก่อนหน้า">‹</button>
       <div class="m-month-cur" id="m-month-cur">กรกฎาคม 2026</div>
       <button class="m-nav-btn" id="m-month-next" aria-label="เดือนถัดไป">›</button>
     </div>
-    <div class="m-range-row">
-      <button class="btn ghost sm" id="m-custom-toggle">📅 กำหนดช่วงเอง</button>
-      <button class="btn ghost sm" id="m-back-to-month" style="display:none">🗓️ กลับไปดูรายเดือน</button>
+    <div class="m-month-nav" id="m-year-nav" style="display:none">
+      <button class="m-nav-btn" id="m-year-prev" aria-label="ปีก่อนหน้า">‹</button>
+      <div class="m-month-cur" id="m-year-cur">2026</div>
+      <button class="m-nav-btn" id="m-year-next" aria-label="ปีถัดไป">›</button>
     </div>
     <div class="m-custom-panel" id="m-custom-panel" style="display:none">
       <label><span>จากวันที่</span><input type="date" id="m-custom-from"></label>
@@ -472,6 +482,21 @@
     <div class="card">
       <h2>หมวดค่าใช้จ่าย <span class="tag" id="m-bars-tag">เดือนนี้</span></h2>
       <div id="m-bars"><div class="empty">ยังไม่มีข้อมูล</div></div>
+    </div>
+
+    <div class="card">
+      <h2>🏷️ จัดการหมวดหมู่ <span class="tag">ใช้ทุกเดือน/ปี</span></h2>
+      <div class="hint" style="margin-bottom:11px">เพิ่มหมวดใหม่พร้อมคำค้น ระบบจะปรับรายการเก่าที่ตรงคำค้นให้เป็นหมวดนี้ทันที และจำไว้ใช้เดารายการใหม่ในอนาคตด้วย</div>
+      <div id="cat-mgr-list" style="display:flex; flex-direction:column; gap:7px; margin-bottom:11px"></div>
+      <button class="btn ghost sm" id="cat-mgr-add">➕ เพิ่มหมวดหมู่ใหม่</button>
+      <div id="cat-mgr-editor" class="m-custom-panel" style="display:none; flex-direction:column; align-items:stretch; margin-top:11px">
+        <input id="cm-name" placeholder="ชื่อหมวดหมู่ เช่น ค่าเลี้ยงดูลูก" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); margin-bottom:9px">
+        <textarea id="cm-keywords" rows="2" placeholder="คำค้น คั่นด้วยจุลภาค เช่น ค่านม, ค่าเทอม, ของเล่น" style="width:100%; border:1px solid var(--line); border-radius:11px; padding:9px 12px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); margin-bottom:9px; resize:vertical"></textarea>
+        <div style="display:flex; gap:8px">
+          <button class="btn ghost sm" id="cm-cancel" style="flex:1">ยกเลิก</button>
+          <button class="btn sm" id="cm-save" style="flex:1">บันทึกหมวดหมู่</button>
+        </div>
+      </div>
     </div>
 
     <div class="grid2">
@@ -733,8 +758,13 @@
         <label><span>นอน (ชม.)</span><input type="number" id="he-sleep" step="0.1" placeholder="7.5"></label>
         <label><span>คุณภาพนอน (1-5)</span><select id="he-sleepq"><option value="">-</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
       </div>
-      <button class="btn" id="he-add">บันทึก</button>
-      <div class="hint">💡 RHR ที่สูงกว่าค่าเฉลี่ยผิดปกติหลายวันติด = สัญญาณพักฟื้นไม่พอ/เริ่มป่วย ควรลดโหลดซ้อมก่อน PYT100</div>
+      <div style="display:flex; gap:9px; align-items:center; flex-wrap:wrap">
+        <button class="btn" id="he-add">บันทึก</button>
+        <button class="btn ghost sm" onclick="document.getElementById('he-ocr-file').click()">📎 แนบรูปให้ระบบอ่าน</button>
+        <input type="file" id="he-ocr-file" accept="image/*" style="display:none">
+        <span id="he-ocr-status" style="font-size:11.5px;color:var(--dim)"></span>
+      </div>
+      <div class="hint">💡 RHR ที่สูงกว่าค่าเฉลี่ยผิดปกติหลายวันติด = สัญญาณพักฟื้นไม่พอ/เริ่มป่วย ควรลดโหลดซ้อมก่อน PYT100<br>📸 แคปหน้าจอเครื่องชั่ง/แอปนอน/แอปนาฬิกา แล้วกด "แนบรูปให้ระบบอ่าน" ระบบจะอ่านตัวเลขใส่ให้อัตโนมัติ (เช็คความถูกต้องก่อนกดบันทึกเสมอ)</div>
     </div>
 
     <div class="card">
@@ -773,6 +803,7 @@
         <button class="btn ghost sm" onclick="document.getElementById('hc-file').click()">📎 แนบรูป/PDF ผลตรวจ</button>
         <input type="file" id="hc-file" accept="image/*,.pdf" multiple style="display:none">
         <span id="hc-file-count" style="font-size:11.5px;color:var(--dim)"></span>
+        <span id="hc-ocr-status" style="font-size:11.5px;color:var(--dim)"></span>
       </div>
       <div class="hint">รูปจะถูกย่อขนาดอัตโนมัติก่อนเก็บ (sync ข้ามเครื่องได้) · ค่าอ้างอิงทั่วไป: ความดัน &lt;120/80 · FBS &lt;100 · LDL &lt;130 · HDL &gt;40 · TG &lt;150 · ยูริก &lt;7</div>
     </div>
@@ -1126,7 +1157,13 @@ function show(v){
 /* ════════ MONEY ════════ */
 async function saveMoney(){ await sSet('money:entries', MONEY); }
 let curMoneyYM = null;   // 'YYYY-MM' — เดือนที่กำลังดูอยู่ในแท็บเงิน
-let moneyViewMode = 'month';   // 'month' | 'custom'
+let curMoneyYear = null;   // 'YYYY' — ปีที่กำลังดูอยู่ (โหมดปี)
+let moneyViewMode = 'month';   // 'month' | 'year' | 'custom'
+function moneyLatestYear(){
+  const years = [...new Set(MONEY.map(e=>(e.date||'').slice(0,4)).filter(Boolean))].sort();
+  const nowYear = String(new Date().getFullYear());
+  return years.length ? (years[years.length-1] > nowYear ? years[years.length-1] : nowYear) : nowYear;
+}
 let listMode = 'week';   // 'week' | 'custom' — สำหรับตาราง "รายการ" แยกจากสรุปด้านบน
 let curWeekStart = null;   // 'YYYY-MM-DD' — วันจันทร์ของสัปดาห์ที่กำลังดู
 let listCustomFrom = null, listCustomTo = null;
@@ -1228,16 +1265,27 @@ function fmtThaiDate(iso){
 }
 function renderMoney(){
   if(!curMoneyYM) curMoneyYM = moneyLatestYM();
-  const isCustom = moneyViewMode==='custom' && customFrom && customTo;
-  document.getElementById('m-month-nav').style.display = isCustom ? 'none' : 'flex';
-  document.getElementById('m-custom-toggle').style.display = isCustom ? 'none' : '';
-  document.getElementById('m-back-to-month').style.display = isCustom ? '' : 'none';
+  if(!curMoneyYear) curMoneyYear = moneyLatestYear();
+  const mode = moneyViewMode;
+  document.getElementById('m-mode-month').classList.toggle('on', mode==='month');
+  document.getElementById('m-mode-year').classList.toggle('on', mode==='year');
+  document.getElementById('m-mode-custom').classList.toggle('on', mode==='custom');
+  document.getElementById('m-month-nav').style.display = mode==='month' ? 'flex' : 'none';
+  document.getElementById('m-year-nav').style.display = mode==='year' ? 'flex' : 'none';
+  document.getElementById('m-custom-panel').style.display = mode==='custom' ? 'flex' : 'none';
 
   let monthE, periodTxt, anchorYm;
-  if(isCustom){
+  if(mode==='custom' && customFrom && customTo){
     monthE = MONEY.filter(e=>e.date && e.date>=customFrom && e.date<=customTo);
     periodTxt = fmtThaiDate(customFrom) + ' – ' + fmtThaiDate(customTo);
     anchorYm = customTo.slice(0,7);
+  } else if(mode==='year'){
+    const yy = curMoneyYear;
+    document.getElementById('m-year-cur').textContent = yy;
+    document.getElementById('m-year-next').disabled = (yy >= moneyLatestYear());
+    monthE = MONEY.filter(e=>(e.date||'').startsWith(yy));
+    periodTxt = 'ปี ' + yy;
+    anchorYm = yy + '-12';
   } else {
     const ym = curMoneyYM;
     const [yy,mm] = ym.split('-');
@@ -1279,7 +1327,7 @@ function renderMoney(){
   document.getElementById('m-donut-legend').innerHTML = donutData.length ? donutData.map(d=>
     `<span><i style="background:${d.color}"></i>${esc(d.label)} <b>${(d.value/exp*100).toFixed(0)}%</b></span>`).join('') : '<span class="empty">ยังไม่มีข้อมูล</span>';
 
-  // trend — 6 เดือนย้อนหลังจาก anchor (เดือนที่เลือก หรือเดือนสุดท้ายของช่วงกำหนดเอง)
+  // trend — 6 เดือนย้อนหลังจาก anchor (เดือนที่เลือก / ธ.ค.ของปีที่เลือก / เดือนสุดท้ายของช่วงกำหนดเอง)
   const trendMonths = []; for(let i=5;i>=0;i--) trendMonths.push(shiftYM(anchorYm,-i));
   const incArr = trendMonths.map(m=>MONEY.filter(e=>e.type==='income' && (e.date||'').startsWith(m)).reduce((s,e)=>s+e.amount,0));
   const exArr = trendMonths.map(m=>MONEY.filter(e=>e.type==='expense' && (e.date||'').startsWith(m)).reduce((s,e)=>s+e.amount,0));
@@ -1314,28 +1362,30 @@ function renderMoney(){
       <td><button class="del" data-mdel="${e.id}">✕</button></td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">ไม่มีรายการในช่วงนี้</td></tr>';
   document.querySelectorAll('[data-mdel]').forEach(b=>b.onclick = async()=>{
-    MONEY = MONEY.filter(x=>x.id!==b.dataset.mdel); await saveMoney(); renderMoney(); renderHome();
+    MONEY = MONEY.filter(x=>x.id!==b.dataset.mdel); await markSeedDeleted(b.dataset.mdel); await saveMoney(); renderMoney(); renderHome(); toast('✓ ลบรายการแล้ว');
   });
 
   const allCats = [...new Set(MONEY.map(e=>e.category).filter(Boolean))];
   document.getElementById('cat-list').innerHTML = allCats.map(c=>`<option value="${esc(c)}">`).join('');
+  renderCategoryManager();
 
   renderMoneyAnalysis();
 }
 document.getElementById('m-month-prev').onclick = ()=>{ curMoneyYM = shiftYM(curMoneyYM, -1); renderMoney(); };
 document.getElementById('m-month-next').onclick = ()=>{ if(curMoneyYM < moneyLatestYM()){ curMoneyYM = shiftYM(curMoneyYM, 1); renderMoney(); } };
-document.getElementById('m-custom-toggle').onclick = ()=>{
-  const panel = document.getElementById('m-custom-panel');
-  const open = panel.style.display !== 'none';
-  panel.style.display = open ? 'none' : 'flex';
-  if(!open){
+document.getElementById('m-year-prev').onclick = ()=>{ curMoneyYear = String(parseInt(curMoneyYear||moneyLatestYear())-1); renderMoney(); };
+document.getElementById('m-year-next').onclick = ()=>{ const y = String(parseInt(curMoneyYear||moneyLatestYear())+1); if(y<=moneyLatestYear()){ curMoneyYear=y; renderMoney(); } };
+document.getElementById('m-mode-month').onclick = ()=>{ moneyViewMode='month'; renderMoney(); };
+document.getElementById('m-mode-year').onclick = ()=>{ moneyViewMode='year'; renderMoney(); };
+document.getElementById('m-mode-custom').onclick = ()=>{
+  moneyViewMode='custom';
+  if(!document.getElementById('m-custom-from').value){
     const ym = curMoneyYM || moneyLatestYM();
     const [yy,mm] = ym.split('-');
-    const first = `${yy}-${mm}-01`;
-    const last = new Date(parseInt(yy), parseInt(mm), 0).toISOString().slice(0,10);
-    if(!document.getElementById('m-custom-from').value) document.getElementById('m-custom-from').value = first;
-    if(!document.getElementById('m-custom-to').value) document.getElementById('m-custom-to').value = last;
+    document.getElementById('m-custom-from').value = `${yy}-${mm}-01`;
+    document.getElementById('m-custom-to').value = new Date(parseInt(yy), parseInt(mm), 0).toISOString().slice(0,10);
   }
+  renderMoney();
 };
 document.getElementById('m-custom-apply').onclick = ()=>{
   const from = document.getElementById('m-custom-from').value;
@@ -1343,12 +1393,6 @@ document.getElementById('m-custom-apply').onclick = ()=>{
   if(!from || !to){ toast('เลือกวันที่ให้ครบทั้งสองช่อง'); return; }
   if(from > to){ toast('วันที่เริ่มต้องมาก่อนวันที่สิ้นสุด'); return; }
   customFrom = from; customTo = to; moneyViewMode = 'custom';
-  document.getElementById('m-custom-panel').style.display = 'none';
-  renderMoney();
-};
-document.getElementById('m-back-to-month').onclick = ()=>{
-  moneyViewMode = 'month';
-  document.getElementById('m-custom-panel').style.display = 'none';
   renderMoney();
 };
 document.getElementById('m-week-prev').onclick = ()=>{ curWeekStart = shiftDate(curWeekStart || listLatestWeekStart(), -7); renderMoney(); };
@@ -1716,7 +1760,10 @@ function renderAssets(){
     </div>`;
   }).join('') : '<div class="empty">ยังไม่มีทรัพย์สิน — เพิ่มด้านบน</div>';
   document.querySelectorAll('[data-adel]').forEach(b=>b.onclick = async()=>{
-    ASSETS.list = ASSETS.list.filter(x=>x.id!==b.dataset.adel); await saveAssets(); renderAssets(); renderHome();
+    const rec = ASSETS.list.find(x=>x.id===b.dataset.adel);
+    ASSETS.list = ASSETS.list.filter(x=>x.id!==b.dataset.adel);
+    if(rec) await markSeedNameDeleted(rec.name);
+    await saveAssets(); renderAssets(); renderHome(); toast('✓ ลบสินทรัพย์แล้ว');
   });
   renderDebts();
 }
@@ -1817,6 +1864,69 @@ async function learnCategory(rec, newCat){
   });
   if(changed) toast(`✓ ปรับหมวดหมู่ย้อนหลังให้ ${changed} รายการที่คล้ายกันเป็น "${newCat}" ด้วย`);
 }
+
+/* ── จัดการหมวดหมู่: ดูรายการหมวดทั้งหมด + เพิ่ม/แก้ไข พร้อมคำค้น (เรียนรู้อนาคต + ปรับย้อนหลัง) ── */
+function categoryStats(){
+  const counts = {};
+  MONEY.forEach(e=>{ if(e.type==='expense' && e.category){ counts[e.category] = (counts[e.category]||0)+1; } });
+  const cats = new Set([...Object.keys(counts), ...Object.values(CAT_RULES)]);
+  return [...cats].sort((a,b)=>(counts[b]||0)-(counts[a]||0)).map(c=>({
+    name:c, count: counts[c]||0,
+    keywords: Object.entries(CAT_RULES).filter(([,v])=>v===c).map(([k])=>k)
+  }));
+}
+function renderCategoryManager(){
+  const box = document.getElementById('cat-mgr-list');
+  const stats = categoryStats();
+  box.innerHTML = stats.length ? stats.map(s=>`
+    <div style="display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:12px; background:var(--card2)">
+      <div style="flex:1; min-width:0">
+        <div style="font-weight:800; font-size:12.5px">${esc(s.name)} <span style="color:var(--dim); font-weight:500; font-size:11px">(${s.count} รายการ)</span></div>
+        ${s.keywords.length ? `<div style="font-size:10.5px; color:var(--dim); margin-top:2px">คำค้น: ${s.keywords.map(esc).join(', ')}</div>` : ''}
+      </div>
+      <button class="btn ghost sm" data-cm-edit="${esc(s.name)}" style="padding:6px 10px">✏️</button>
+    </div>`).join('') : '<div class="empty">ยังไม่มีหมวดหมู่</div>';
+  document.querySelectorAll('[data-cm-edit]').forEach(b=>b.onclick = ()=>openCategoryEditor(b.dataset.cmEdit));
+}
+function openCategoryEditor(name){
+  const stats = categoryStats();
+  const existing = name ? stats.find(s=>s.name===name) : null;
+  document.getElementById('cm-name').value = existing ? existing.name : '';
+  document.getElementById('cm-keywords').value = existing ? existing.keywords.join(', ') : '';
+  document.getElementById('cat-mgr-editor').style.display = 'flex';
+  document.getElementById('cm-name').dataset.editingOriginal = existing ? existing.name : '';
+}
+document.getElementById('cat-mgr-add').onclick = ()=>openCategoryEditor(null);
+document.getElementById('cm-cancel').onclick = ()=>{ document.getElementById('cat-mgr-editor').style.display='none'; };
+document.getElementById('cm-save').onclick = async ()=>{
+  const name = document.getElementById('cm-name').value.trim();
+  if(!name){ toast('ใส่ชื่อหมวดหมู่ก่อน'); return; }
+  const originalName = document.getElementById('cm-name').dataset.editingOriginal;
+  const keywords = document.getElementById('cm-keywords').value.split(',').map(k=>k.trim().toLowerCase()).filter(Boolean);
+  // ถ้าเปลี่ยนชื่อหมวด (แก้ไขของเดิม) ให้ย้ายรายการเก่าที่ใช้ชื่อเดิมไปชื่อใหม่ด้วย
+  let renamed = 0;
+  if(originalName && originalName!==name){
+    MONEY.forEach(x=>{ if(x.category===originalName){ x.category = name; renamed++; } });
+    Object.keys(CAT_RULES).forEach(k=>{ if(CAT_RULES[k]===originalName) delete CAT_RULES[k]; });
+  }
+  // เรียนรู้คำค้นทั้งหมดของหมวดนี้ไว้ใช้เดารายการใหม่ในอนาคต
+  keywords.forEach(k=>{ CAT_RULES[k] = name; });
+  await saveCatRules();
+  // ปรับรายการเก่าที่ item/หมวดตรงกับคำค้นใดคำค้นหนึ่ง ให้เป็นหมวดนี้ (ย้อนหลัง)
+  let changed = renamed;
+  if(keywords.length){
+    MONEY.forEach(x=>{
+      if(x.type==='income' || x.category===name) return;
+      const xi = (x.item||'').trim().toLowerCase();
+      if(!xi) return;
+      if(keywords.some(k=>k.length>=2 && xi.includes(k))){ x.category = name; changed++; }
+    });
+  }
+  await saveMoney();
+  document.getElementById('cat-mgr-editor').style.display = 'none';
+  renderMoney();
+  toast(changed ? `✓ บันทึกหมวดหมู่ "${name}" — ปรับรายการที่เกี่ยวข้อง ${changed} รายการ` : `✓ บันทึกหมวดหมู่ "${name}" แล้ว`);
+};
 /* ── inline edit (click a cell to edit, blur to save) ── */
 document.addEventListener('focusout', async e=>{
   const el = e.target;
@@ -1889,7 +1999,7 @@ function renderDebts(){
       <td><button class="del" data-ddel="${d.id}">✕</button></td></tr>`).join('')
     : '<tr><td colspan="7" class="empty">ยังไม่มีหนี้สิน</td></tr>';
   document.querySelectorAll('[data-ddel]').forEach(b=>b.onclick = async()=>{
-    ASSETS.debts = ASSETS.debts.filter(x=>x.id!==b.dataset.ddel); await saveAssets(); renderDebts();
+    ASSETS.debts = ASSETS.debts.filter(x=>x.id!==b.dataset.ddel); await markSeedDeleted(b.dataset.ddel); await saveAssets(); renderDebts(); toast('✓ ลบแล้ว');
   });
 }
 document.getElementById('db-add').onclick = async ()=>{
@@ -1939,7 +2049,7 @@ function renderHealth(){
       <td><button class="del" data-hedel="${l.id}">✕</button></td></tr>`).join('')
     : '<tr><td colspan="7" class="empty">ยังไม่มีบันทึก</td></tr>';
   document.querySelectorAll('[data-hedel]').forEach(b=>b.onclick = async()=>{
-    HEALTH.logs = HEALTH.logs.filter(x=>x.id!==b.dataset.hedel); await saveHealth(); renderHealth();
+    HEALTH.logs = HEALTH.logs.filter(x=>x.id!==b.dataset.hedel); await markSeedDeleted(b.dataset.hedel); await saveHealth(); renderHealth();
   });
 
   drawTrend('chart-weight','cw-range', logs, 'weight', '#12A97C', ' kg');
@@ -2098,6 +2208,55 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   toast(gross!==null ? `✓ อ่านรายได้รวมได้ ${fmt(gross)} — เช็คทุกช่องก่อนบันทึก` : '⚠️ อ่านตัวเลขไม่ชัด กรุณาเช็ค/กรอกเองในช่องที่ว่าง');
 };
 
+/* ── OCR: บันทึกค่าสุขภาพประจำวัน (แคปหน้าจอเครื่องชั่ง/แอปนอน/นาฬิกา) ── */
+document.getElementById('he-ocr-file').onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return; e.target.value='';
+  const text = await runOcr(f, 'he-ocr-status'); if(!text) return;
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const weight = findNearNumber(lines, ['น้ำหนัก','weight','body weight']);
+  const fat = findNearNumber(lines, ['ไขมัน','body fat','fat%','fat %','bodyfat']);
+  const rhr = findNearNumber(lines, ['rhr','resting heart rate','อัตราการเต้นหัวใจขณะพัก','ชีพจรขณะพัก','heart rate']);
+  const sleep = findNearNumber(lines, ['sleep duration','sleep time','เวลานอน','ระยะเวลานอน','total sleep']) ??
+                findNearNumber(lines, ['sleep','นอน']);
+  const date = findDate(text);
+  let filled = [];
+  if(weight!==null){ document.getElementById('he-weight').value = weight; filled.push('น้ำหนัก '+weight); }
+  if(fat!==null){ document.getElementById('he-fat').value = fat; filled.push('ไขมัน '+fat+'%'); }
+  if(rhr!==null){ document.getElementById('he-rhr').value = rhr; filled.push('RHR '+rhr); }
+  if(sleep!==null){ document.getElementById('he-sleep').value = sleep; filled.push('นอน '+sleep+'ชม.'); }
+  if(date) document.getElementById('he-date').value = date;
+  toast(filled.length ? `✓ อ่านได้: ${filled.join(' · ')} — เช็คให้ตรงก่อนกดบันทึก` : '⚠️ อ่านตัวเลขไม่ได้ ลองกรอกเองหรือถ่ายรูปให้ชัดกว่านี้');
+};
+
+/* ── OCR: ผลตรวจสุขภาพประจำปี (แคป/ถ่ายรูปใบผลตรวจ) ── */
+document.getElementById('hc-file').onchange = async e=>{
+  const files = [...e.target.files];
+  pendingHcFiles = [];
+  for(const f of files){ pendingHcFiles.push({name:f.name, dataUrl: await fileToDataUrl(f, 1400)}); }
+  document.getElementById('hc-file-count').textContent = pendingHcFiles.length ? `แนบแล้ว ${pendingHcFiles.length} ไฟล์` : '';
+  if(!files.length) return;
+  const text = await runOcr(files[0], 'hc-ocr-status'); if(!text) return;
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const setIfEmpty = (id, val) => { const el = document.getElementById(id); if(val!==null && !el.value) el.value = val; };
+  // ความดัน มักเขียนติดกันแบบ SYS/DIA เช่น 120/80
+  const bp = text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);
+  if(bp){ setIfEmpty('hc-sys', parseFloat(bp[1])); setIfEmpty('hc-dia', parseFloat(bp[2])); }
+  else{
+    setIfEmpty('hc-sys', findNearNumber(lines, ['sys','systolic','ความดันตัวบน']));
+    setIfEmpty('hc-dia', findNearNumber(lines, ['dia','diastolic','ความดันตัวล่าง']));
+  }
+  setIfEmpty('hc-fbs', findNearNumber(lines, ['fbs','glucose','น้ำตาลในเลือด','น้ำตาล']));
+  setIfEmpty('hc-chol', findNearNumber(lines, ['cholesterol','โคเลสเตอรอล','คอเลสเตอรอล']));
+  setIfEmpty('hc-ldl', findNearNumber(lines, ['ldl']));
+  setIfEmpty('hc-hdl', findNearNumber(lines, ['hdl']));
+  setIfEmpty('hc-tg', findNearNumber(lines, ['triglyceride','tg ','trig']));
+  setIfEmpty('hc-uric', findNearNumber(lines, ['uric acid','uric','ยูริก']));
+  setIfEmpty('hc-alt', findNearNumber(lines, ['alt','sgpt']));
+  const date = findDate(text);
+  if(date && !document.getElementById('hc-date').value) document.getElementById('hc-date').value = date;
+  toast('✓ อ่านผลตรวจแล้ว — เช็คทุกช่องให้ตรงกับใบจริงก่อนกดบันทึกผลตรวจ');
+};
+
 function renderCheckups(){
   const list = [...(HEALTH.checkups||[])].sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('hc-count').textContent = list.length + ' ครั้ง';
@@ -2136,12 +2295,6 @@ document.getElementById('m-close').onclick = ()=>document.getElementById('modal'
 document.getElementById('modal').onclick = e=>{ if(e.target.id==='modal') e.currentTarget.classList.remove('on'); };
 
 let pendingHcFiles = [];
-document.getElementById('hc-file').onchange = async e=>{
-  const files = [...e.target.files];
-  pendingHcFiles = [];
-  for(const f of files){ pendingHcFiles.push({name:f.name, dataUrl: await fileToDataUrl(f, 1400)}); }
-  document.getElementById('hc-file-count').textContent = pendingHcFiles.length ? `แนบแล้ว ${pendingHcFiles.length} ไฟล์` : '';
-};
 document.getElementById('hc-add').onclick = async ()=>{
   const date = document.getElementById('hc-date').value; if(!date){ toast('ใส่วันที่ตรวจก่อน'); return; }
   const val = id => document.getElementById(id).value;
@@ -3124,13 +3277,23 @@ function renderAll(){ renderMoney(); renderTax(); renderAssets(); renderGoals();
 
 const PENDING_IMPORT = {"money": [{"id": "imp-tx-0000", "date": "2026-07-01", "type": "income", "category": "เงินคืน", "item": "รับเงินคืนจาก สหกร (01/07 08:24)", "amount": 4720.45}, {"id": "imp-tx-0001", "date": "2026-06-01", "type": "income", "category": "เงินเดือน", "item": "เงินเดือน (26/06 08:09)", "amount": 29821.87}, {"id": "imp-tx-0002", "date": "2026-06-01", "type": "income", "category": "รายได้จากการลงทุน", "item": "ขายหุ้นใน dime (29/06 20:47)", "amount": 2606.0}, {"id": "imp-tx-0003", "date": "2026-06-01", "type": "income", "category": "เงินคืน", "item": "ได้เงินคืน (05/06 18:48)", "amount": 900.0}, {"id": "imp-tx-0004", "date": "2026-05-01", "type": "income", "category": "เงินเดือน", "item": "เงินเดือน (27/05 15:34)", "amount": 30767.53}, {"id": "imp-tx-0005", "date": "2026-05-01", "type": "income", "category": "เงินเดือน", "item": "โบนัส (08/05 10:07)", "amount": 17474.43}, {"id": "imp-tx-0006", "date": "2026-05-01", "type": "income", "category": "เงินคืน", "item": "ได้รับเงินคืนจาก สอ กฟผ (18/05 09:13)", "amount": 2880.0}, {"id": "imp-tx-0007", "date": "2026-05-01", "type": "income", "category": "เงินคืน", "item": "ได้รับเงินคืน (09/05 12:00)", "amount": 2630.0}, {"id": "imp-tx-0008", "date": "2026-05-01", "type": "income", "category": "เงินคืน", "item": "ค่านม (07/05 12:07)", "amount": 700.0}, {"id": "imp-tx-0009", "date": "2026-05-01", "type": "income", "category": "เงินคืน", "item": "รับงินคืนจาก อ๋อ (22/05 22:38)", "amount": 500.0}, {"id": "imp-tx-0010", "date": "2026-05-01", "type": "income", "category": "ไม่แน่ใจ", "item": "BTC (24/05 23:12)", "amount": 2327.0}, {"id": "imp-tx-0011", "date": "2026-05-01", "type": "income", "category": "ไม่แน่ใจ", "item": "คืนเงิน (01/05 12:00)", "amount": 500.0}, {"id": "imp-tx-0012", "date": "2026-05-01", "type": "income", "category": "ของขวัญ/เงินที่ได้รับ", "item": "ค่าหวย (11/05 20:55)", "amount": 1680.0}, {"id": "imp-tx-0013", "date": "2026-04-01", "type": "income", "category": "เงินเดือน", "item": "เงินเดือน (28/04 12:00)", "amount": 37953.8}, {"id": "imp-tx-0014", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (04/07 20:07)", "amount": 341.0}, {"id": "imp-tx-0015", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (05/07 09:27)", "amount": 201.75}, {"id": "imp-tx-0016", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (01/07 19:30)", "amount": 197.0}, {"id": "imp-tx-0017", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (02/07 19:34)", "amount": 150.0}, {"id": "imp-tx-0018", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (01/07 15:34)", "amount": 150.0}, {"id": "imp-tx-0019", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ยาคูลท์ 1แพค (06/07 11:41)", "amount": 96.0}, {"id": "imp-tx-0020", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (04/07 16:05)", "amount": 79.0}, {"id": "imp-tx-0021", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (06/07 12:00)", "amount": 60.0}, {"id": "imp-tx-0022", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (02/07 12:17)", "amount": 60.0}, {"id": "imp-tx-0023", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (03/07 11:59)", "amount": 54.0}, {"id": "imp-tx-0024", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "สตอรเบอรี่โยกเกิต (01/07 20:06)", "amount": 35.0}, {"id": "imp-tx-0025", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (01/07 07:59)", "amount": 22.0}, {"id": "imp-tx-0026", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (07/07 07:45)", "amount": 16.0}, {"id": "imp-tx-0027", "date": "2026-07-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (03/07 08:27)", "amount": 16.0}, {"id": "imp-tx-0028", "date": "2026-07-01", "type": "expense", "category": "บัตรเครดิต", "item": "ค่าบัตรเครดิตรกรุงเทพ (05/07 00:11)", "amount": 1092.0}, {"id": "imp-tx-0029", "date": "2026-07-01", "type": "expense", "category": "กีฬา", "item": "ค่านวดกีฬาโคชปริ้น (04/07 15:04)", "amount": 1000.0}, {"id": "imp-tx-0030", "date": "2026-07-01", "type": "expense", "category": "อื่นๆ", "item": "ซื้อลอตเตอรี่ (02/07 07:59)", "amount": 320.0}, {"id": "imp-tx-0031", "date": "2026-07-01", "type": "expense", "category": "อื่นๆ", "item": "ซื้อเค้กให้ ยาย (03/07 11:39)", "amount": 166.0}, {"id": "imp-tx-0032", "date": "2026-07-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (01/07 22:47)", "amount": 200.0}, {"id": "imp-tx-0033", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ลงทุน Dime (12/06 19:37)", "amount": 5000.0}, {"id": "imp-tx-0034", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ลงทุน Bitkub (07/06 14:07)", "amount": 4000.0}, {"id": "imp-tx-0035", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "Dime (03/06 21:08)", "amount": 3000.0}, {"id": "imp-tx-0036", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (03/06 23:03)", "amount": 2000.0}, {"id": "imp-tx-0037", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (30/06 06:57)", "amount": 1000.0}, {"id": "imp-tx-0038", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (29/06 21:04)", "amount": 1000.0}, {"id": "imp-tx-0039", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ลงทุน Bitkub (26/06 11:00)", "amount": 1000.0}, {"id": "imp-tx-0040", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ลงทุน bitkub (24/06 23:18)", "amount": 1000.0}, {"id": "imp-tx-0041", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (24/06 20:46)", "amount": 1000.0}, {"id": "imp-tx-0042", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ซื้อทองใน Dime (18/06 22:41)", "amount": 1000.0}, {"id": "imp-tx-0043", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (02/06 00:01)", "amount": 1000.0}, {"id": "imp-tx-0044", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ซื้อหุ้น Delta ใน Dime (24/06 15:57)", "amount": 945.0}, {"id": "imp-tx-0045", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ซื้อหุ้น advance ใน dime (24/06 14:14)", "amount": 710.0}, {"id": "imp-tx-0046", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (25/06 12:00)", "amount": 400.0}, {"id": "imp-tx-0047", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (29/06 20:45)", "amount": 200.0}, {"id": "imp-tx-0048", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (10/06 22:26)", "amount": 200.0}, {"id": "imp-tx-0049", "date": "2026-06-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (30/06 19:58)", "amount": 100.0}, {"id": "imp-tx-0050", "date": "2026-06-01", "type": "expense", "category": "บัตรเครดิต", "item": "Kbank (26/06 10:20)", "amount": 8850.0}, {"id": "imp-tx-0051", "date": "2026-06-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตร KTC (26/06 10:20)", "amount": 4950.0}, {"id": "imp-tx-0052", "date": "2026-06-01", "type": "expense", "category": "บัตรเครดิต", "item": "กรุงศรี JCB (26/06 10:20)", "amount": 4650.0}, {"id": "imp-tx-0053", "date": "2026-06-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตรกรุงเทพ (08/06 07:14)", "amount": 1092.0}, {"id": "imp-tx-0054", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (13/06 18:33)", "amount": 765.0}, {"id": "imp-tx-0055", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (12/06 20:17)", "amount": 575.0}, {"id": "imp-tx-0056", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ใช้หนี้ อ๋อ (26/06 12:22)", "amount": 550.0}, {"id": "imp-tx-0057", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ของกินงานวิ่ง (12/06 19:31)", "amount": 520.0}, {"id": "imp-tx-0058", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น ชาบุ (28/06 20:10)", "amount": 516.0}, {"id": "imp-tx-0059", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กินเลี้ยงแผนก (04/06 13:25)", "amount": 361.0}, {"id": "imp-tx-0060", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเช้า (14/06 09:09)", "amount": 335.0}, {"id": "imp-tx-0061", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (07/06 20:23)", "amount": 326.0}, {"id": "imp-tx-0062", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "อาหารว่าง (13/06 19:51)", "amount": 324.0}, {"id": "imp-tx-0063", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (23/06 12:58)", "amount": 270.0}, {"id": "imp-tx-0064", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ซื้อขนมบราวนี่ (05/06 09:21)", "amount": 214.0}, {"id": "imp-tx-0065", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (23/06 19:33)", "amount": 200.0}, {"id": "imp-tx-0066", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ขนม (06/06 12:45)", "amount": 187.0}, {"id": "imp-tx-0067", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (19/06 12:12)", "amount": 160.0}, {"id": "imp-tx-0068", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (30/06 12:31)", "amount": 150.0}, {"id": "imp-tx-0069", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (24/06 12:24)", "amount": 150.0}, {"id": "imp-tx-0070", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (22/06 12:15)", "amount": 150.0}, {"id": "imp-tx-0071", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (18/06 22:41)", "amount": 150.0}, {"id": "imp-tx-0072", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (09/06 12:15)", "amount": 150.0}, {"id": "imp-tx-0073", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็นเมื่อวาน (04/06 12:00)", "amount": 150.0}, {"id": "imp-tx-0074", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (29/06 12:18)", "amount": 100.0}, {"id": "imp-tx-0075", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ข้าวเหนียวหมูปิ้ง (28/06 19:38)", "amount": 100.0}, {"id": "imp-tx-0076", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (06/06 12:45)", "amount": 100.0}, {"id": "imp-tx-0077", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (24/06 07:44)", "amount": 95.0}, {"id": "imp-tx-0078", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (17/06 12:28)", "amount": 94.0}, {"id": "imp-tx-0079", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (26/06 12:19)", "amount": 85.0}, {"id": "imp-tx-0080", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (08/06 12:28)", "amount": 82.0}, {"id": "imp-tx-0081", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (29/06 13:26)", "amount": 65.0}, {"id": "imp-tx-0082", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (15/06 12:16)", "amount": 64.0}, {"id": "imp-tx-0083", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มือเที่ยง (25/06 12:00)", "amount": 60.0}, {"id": "imp-tx-0084", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ข้าวเหนียวหมูปิ้ง (21/06 21:55)", "amount": 60.0}, {"id": "imp-tx-0085", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (26/06 08:09)", "amount": 55.0}, {"id": "imp-tx-0086", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (02/06 12:00)", "amount": 55.0}, {"id": "imp-tx-0087", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (10/06 12:30)", "amount": 52.0}, {"id": "imp-tx-0088", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (24/06 19:24)", "amount": 50.0}, {"id": "imp-tx-0089", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (06/06 13:27)", "amount": 50.0}, {"id": "imp-tx-0090", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (11/06 11:59)", "amount": 46.0}, {"id": "imp-tx-0091", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (04/06 13:09)", "amount": 46.0}, {"id": "imp-tx-0092", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (05/06 12:40)", "amount": 44.0}, {"id": "imp-tx-0093", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (30/06 07:33)", "amount": 40.0}, {"id": "imp-tx-0094", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (25/06 07:35)", "amount": 40.0}, {"id": "imp-tx-0095", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (23/06 07:39)", "amount": 40.0}, {"id": "imp-tx-0096", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (19/06 07:35)", "amount": 40.0}, {"id": "imp-tx-0097", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (18/06 07:36)", "amount": 40.0}, {"id": "imp-tx-0098", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "น้ำหวาน (07/06 19:41)", "amount": 35.0}, {"id": "imp-tx-0099", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (16/06 12:00)", "amount": 26.0}, {"id": "imp-tx-0100", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (05/06 12:45)", "amount": 26.0}, {"id": "imp-tx-0101", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ขนม (14/06 09:28)", "amount": 24.0}, {"id": "imp-tx-0102", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (05/06 19:08)", "amount": 22.0}, {"id": "imp-tx-0103", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (11/06 14:35)", "amount": 20.0}, {"id": "imp-tx-0104", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (17/06 07:54)", "amount": 16.0}, {"id": "imp-tx-0105", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (16/06 07:54)", "amount": 16.0}, {"id": "imp-tx-0106", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (10/06 07:53)", "amount": 16.0}, {"id": "imp-tx-0107", "date": "2026-06-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (09/06 08:50)", "amount": 16.0}, {"id": "imp-tx-0108", "date": "2026-06-01", "type": "expense", "category": "อื่นๆ", "item": "ใช้หนี้ (ใช้หนี้ อ๋อ) (26/06 10:20)", "amount": 2650.0}, {"id": "imp-tx-0109", "date": "2026-06-01", "type": "expense", "category": "อื่นๆ", "item": "ลอตเตอรี่ (17/06 10:39)", "amount": 320.0}, {"id": "imp-tx-0110", "date": "2026-06-01", "type": "expense", "category": "อื่นๆ", "item": "ลอตเตอรี่ (02/06 12:00)", "amount": 320.0}, {"id": "imp-tx-0111", "date": "2026-06-01", "type": "expense", "category": "อื่นๆ", "item": "หนังสือ (21/06 21:56)", "amount": 281.82}, {"id": "imp-tx-0112", "date": "2026-06-01", "type": "expense", "category": "อื่นๆ", "item": "ซื้อหวย (03/06 11:44)", "amount": 120.0}, {"id": "imp-tx-0113", "date": "2026-06-01", "type": "expense", "category": "อื่นๆ", "item": "ค่าส่งเอกสาร (09/06 11:43)", "amount": 40.0}, {"id": "imp-tx-0114", "date": "2026-06-01", "type": "expense", "category": "กีฬา", "item": "กีฬา (HOP Coaching) (26/06 10:20)", "amount": 2000.0}, {"id": "imp-tx-0115", "date": "2026-06-01", "type": "expense", "category": "กีฬา", "item": "ค่านวด (10/06 18:21)", "amount": 500.0}, {"id": "imp-tx-0116", "date": "2026-06-01", "type": "expense", "category": "เงินให้หลาน", "item": "ให้มุก (01/06 14:41)", "amount": 2000.0}, {"id": "imp-tx-0117", "date": "2026-06-01", "type": "expense", "category": "เงินให้หลาน", "item": "ให้โต้ (01/06 14:41)", "amount": 200.0}, {"id": "imp-tx-0118", "date": "2026-06-01", "type": "expense", "category": "เงินให้หลาน", "item": "กล่องดินสอ (18/06 22:41)", "amount": 79.6}, {"id": "imp-tx-0119", "date": "2026-06-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ซื้อทองใน dime (24/06 14:13)", "amount": 1000.0}, {"id": "imp-tx-0120", "date": "2026-06-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ซื้อของ shopee (29/06 09:29)", "amount": 688.0}, {"id": "imp-tx-0121", "date": "2026-06-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ซื้อรีโมทแอร์ (22/06 22:40)", "amount": 103.39}, {"id": "imp-tx-0122", "date": "2026-06-01", "type": "expense", "category": "ที่อยู่อาศัย & สาธารณูปโภค", "item": "อินเทอร์เน็ต (AIS) (26/06 10:20)", "amount": 625.93}, {"id": "imp-tx-0123", "date": "2026-06-01", "type": "expense", "category": "ซอฟต์แวร์รายเดือน", "item": "แอปพลิเคชั่น (Youtube+Netflix+Mono) (26/06 10:20)", "amount": 561.0}, {"id": "imp-tx-0124", "date": "2026-06-01", "type": "expense", "category": "ค่าเดินทาง", "item": "ล้างรถ (28/06 19:37)", "amount": 500.0}, {"id": "imp-tx-0125", "date": "2026-06-01", "type": "expense", "category": "ของใช้ในครัวเรือน", "item": "น้ำยาฉีดกระจก (01/06 14:57)", "amount": 199.0}, {"id": "imp-tx-0126", "date": "2026-06-01", "type": "expense", "category": "ของใช้ในครัวเรือน", "item": "ของใช้ (06/06 20:00)", "amount": 78.0}, {"id": "imp-tx-0127", "date": "2026-05-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตร k bank (27/05 15:34)", "amount": 10909.94}, {"id": "imp-tx-0128", "date": "2026-05-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตร UOB (27/05 15:34)", "amount": 5634.0}, {"id": "imp-tx-0129", "date": "2026-05-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตร KTC (27/05 15:34)", "amount": 4350.0}, {"id": "imp-tx-0130", "date": "2026-05-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตร กรุงศรี JCB (27/05 15:34)", "amount": 2870.0}, {"id": "imp-tx-0131", "date": "2026-05-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตร กรุงศรี Lotus (27/05 15:34)", "amount": 2425.0}, {"id": "imp-tx-0132", "date": "2026-05-01", "type": "expense", "category": "บัตรเครดิต", "item": "บัตร UOB Lazada (27/05 15:34)", "amount": 1461.0}, {"id": "imp-tx-0133", "date": "2026-05-01", "type": "expense", "category": "อื่นๆ", "item": "ซื้อของให้แม่ (08/05 10:08)", "amount": 7000.0}, {"id": "imp-tx-0134", "date": "2026-05-01", "type": "expense", "category": "อื่นๆ", "item": "ล้างรถ (31/05 10:42)", "amount": 500.0}, {"id": "imp-tx-0135", "date": "2026-05-01", "type": "expense", "category": "อื่นๆ", "item": "ลอตเตอรี่ (27/05 18:44)", "amount": 320.0}, {"id": "imp-tx-0136", "date": "2026-05-01", "type": "expense", "category": "อื่นๆ", "item": "ลอตเตอรี่ (17/05 12:08)", "amount": 320.0}, {"id": "imp-tx-0137", "date": "2026-05-01", "type": "expense", "category": "อื่นๆ", "item": "หวย (07/05 07:45)", "amount": 120.0}, {"id": "imp-tx-0138", "date": "2026-05-01", "type": "expense", "category": "อื่นๆ", "item": "ซื้อใบทายผลฟุตบอล (20/05 15:40)", "amount": 100.0}, {"id": "imp-tx-0139", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (03/05 12:00)", "amount": 700.0}, {"id": "imp-tx-0140", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กินดื่ม (05/05 12:00)", "amount": 655.0}, {"id": "imp-tx-0141", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กินเนื้อกระทะ (31/05 10:42)", "amount": 500.0}, {"id": "imp-tx-0142", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (23/05 21:14)", "amount": 450.0}, {"id": "imp-tx-0143", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (27/05 21:11)", "amount": 410.0}, {"id": "imp-tx-0144", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (04/05 23:37)", "amount": 390.0}, {"id": "imp-tx-0145", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (26/05 20:15)", "amount": 315.0}, {"id": "imp-tx-0146", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (12/05 21:29)", "amount": 300.0}, {"id": "imp-tx-0147", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ซื้อขนม (23/05 20:05)", "amount": 225.0}, {"id": "imp-tx-0148", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (07/05 12:46)", "amount": 200.0}, {"id": "imp-tx-0149", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ซื้อขนม (15/05 19:50)", "amount": 191.0}, {"id": "imp-tx-0150", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (25/05 19:25)", "amount": 185.0}, {"id": "imp-tx-0151", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (21/05 20:34)", "amount": 185.0}, {"id": "imp-tx-0152", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (27/05 12:33)", "amount": 160.0}, {"id": "imp-tx-0153", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (16/05 21:15)", "amount": 160.0}, {"id": "imp-tx-0154", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (14/05 12:26)", "amount": 160.0}, {"id": "imp-tx-0155", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (11/05 14:21)", "amount": 160.0}, {"id": "imp-tx-0156", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (29/05 12:08)", "amount": 150.0}, {"id": "imp-tx-0157", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (26/05 12:39)", "amount": 150.0}, {"id": "imp-tx-0158", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (22/05 12:17)", "amount": 150.0}, {"id": "imp-tx-0159", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (21/05 12:22)", "amount": 150.0}, {"id": "imp-tx-0160", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (08/05 12:25)", "amount": 150.0}, {"id": "imp-tx-0161", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (06/05 12:35)", "amount": 150.0}, {"id": "imp-tx-0162", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (05/05 12:10)", "amount": 150.0}, {"id": "imp-tx-0163", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "อาหารว่าง (24/05 11:41)", "amount": 130.0}, {"id": "imp-tx-0164", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (20/05 12:22)", "amount": 130.0}, {"id": "imp-tx-0165", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ อาหารว่าง (27/05 07:44)", "amount": 125.0}, {"id": "imp-tx-0166", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเย็น (11/05 19:41)", "amount": 120.0}, {"id": "imp-tx-0167", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (15/05 12:04)", "amount": 115.0}, {"id": "imp-tx-0168", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (26/05 07:51)", "amount": 110.0}, {"id": "imp-tx-0169", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (24/05 12:24)", "amount": 104.0}, {"id": "imp-tx-0170", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (18/05 12:33)", "amount": 100.0}, {"id": "imp-tx-0171", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (17/05 15:22)", "amount": 100.0}, {"id": "imp-tx-0172", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ยาคูลท์ (23/05 21:14)", "amount": 96.0}, {"id": "imp-tx-0173", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (30/05 12:00)", "amount": 86.0}, {"id": "imp-tx-0174", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (06/05 12:53)", "amount": 80.0}, {"id": "imp-tx-0175", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "KUAKING COFFEE (28/05 12:00)", "amount": 65.0}, {"id": "imp-tx-0176", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (09/05 12:00)", "amount": 49.0}, {"id": "imp-tx-0177", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (28/05 07:44)", "amount": 40.0}, {"id": "imp-tx-0178", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (22/05 07:42)", "amount": 40.0}, {"id": "imp-tx-0179", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (21/05 07:44)", "amount": 40.0}, {"id": "imp-tx-0180", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (20/05 07:43)", "amount": 40.0}, {"id": "imp-tx-0181", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ เช้า (19/05 11:59)", "amount": 40.0}, {"id": "imp-tx-0182", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (15/05 07:47)", "amount": 40.0}, {"id": "imp-tx-0183", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (12/05 07:39)", "amount": 40.0}, {"id": "imp-tx-0184", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (06/05 07:43)", "amount": 40.0}, {"id": "imp-tx-0185", "date": "2026-05-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "น้ำ (17/05 22:23)", "amount": 10.0}, {"id": "imp-tx-0186", "date": "2026-05-01", "type": "expense", "category": "กีฬา", "item": "coaching (27/05 15:34)", "amount": 2000.0}, {"id": "imp-tx-0187", "date": "2026-05-01", "type": "expense", "category": "กีฬา", "item": "นวดกายภาพ (13/05 11:46)", "amount": 1000.0}, {"id": "imp-tx-0188", "date": "2026-05-01", "type": "expense", "category": "เงินให้หลาน", "item": "ใช้หนี้ให้อ๋อ (27/05 15:34)", "amount": 2650.0}, {"id": "imp-tx-0189", "date": "2026-05-01", "type": "expense", "category": "เงินให้หลาน", "item": "ให้ ดาริน (31/05 10:42)", "amount": 200.0}, {"id": "imp-tx-0190", "date": "2026-05-01", "type": "expense", "category": "เงินให้หลาน", "item": "ดาริน (03/05 12:00)", "amount": 40.0}, {"id": "imp-tx-0191", "date": "2026-05-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "shopee (27/05 15:34)", "amount": 688.0}, {"id": "imp-tx-0192", "date": "2026-05-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ฝากซื้อของใน shopee (20/05 15:40)", "amount": 380.0}, {"id": "imp-tx-0193", "date": "2026-05-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "เสื้อ กางเกง (12/05 21:29)", "amount": 380.0}, {"id": "imp-tx-0194", "date": "2026-05-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "เติมเกม (07/05 14:23)", "amount": 349.0}, {"id": "imp-tx-0195", "date": "2026-05-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ลอตเตอรี่ (03/05 12:00)", "amount": 240.0}, {"id": "imp-tx-0196", "date": "2026-05-01", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ลอตเตอรี่ (06/05 16:12)", "amount": 160.0}, {"id": "imp-tx-0197", "date": "2026-05-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ลงทุน Dime (21/05 21:13)", "amount": 700.0}, {"id": "imp-tx-0198", "date": "2026-05-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "dime (27/05 22:19)", "amount": 400.0}, {"id": "imp-tx-0199", "date": "2026-05-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ลงทุนใน dime (13/05 22:05)", "amount": 400.0}, {"id": "imp-tx-0200", "date": "2026-05-01", "type": "expense", "category": "ที่อยู่อาศัย & สาธารณูปโภค", "item": "internet (27/05 15:34)", "amount": 625.93}, {"id": "imp-tx-0201", "date": "2026-05-01", "type": "expense", "category": "ที่อยู่อาศัย & สาธารณูปโภค", "item": "ล้างรถ (17/05 22:23)", "amount": 300.0}, {"id": "imp-tx-0202", "date": "2026-05-01", "type": "expense", "category": "ของใช้ในครัวเรือน", "item": "ซื้อของทั่วไป (27/05 15:34)", "amount": 585.0}, {"id": "imp-tx-0203", "date": "2026-05-01", "type": "expense", "category": "ไม่แน่ใจ", "item": "ให้หลาน (02/05 12:00)", "amount": 500.0}, {"id": "imp-tx-0204", "date": "2026-05-01", "type": "expense", "category": "ซอฟต์แวร์รายเดือน", "item": "youtube+Netflix+Disney (27/05 15:34)", "amount": 318.0}, {"id": "imp-tx-0205", "date": "2026-05-01", "type": "expense", "category": "สุขภาพ & ความงาม", "item": "สเปรแก้ปวด (12/05 21:30)", "amount": 169.0}, {"id": "imp-tx-0206", "date": "2026-05-01", "type": "expense", "category": "สุขภาพ & ความงาม", "item": "ตัดผม (23/05 20:03)", "amount": 80.0}, {"id": "imp-tx-0207", "date": "2026-05-01", "type": "expense", "category": "ค่าเดินทาง", "item": "M pass (24/05 22:07)", "amount": 200.0}, {"id": "imp-tx-0208", "date": "2026-04-01", "type": "expense", "category": "ไม่แน่ใจ", "item": "กรุงไทย (28/04 12:00)", "amount": 10100.0}, {"id": "imp-tx-0209", "date": "2026-04-01", "type": "expense", "category": "ไม่แน่ใจ", "item": "UOB (28/04 12:00)", "amount": 6300.0}, {"id": "imp-tx-0210", "date": "2026-04-01", "type": "expense", "category": "ไม่แน่ใจ", "item": "กรุงศรีเฟิร์สช้อยส์ (28/04 12:00)", "amount": 4100.0}, {"id": "imp-tx-0211", "date": "2026-04-01", "type": "expense", "category": "ไม่แน่ใจ", "item": "ใช้หนี้ อ๋อ (28/04 12:00)", "amount": 3300.0}, {"id": "imp-tx-0212", "date": "2026-04-01", "type": "expense", "category": "ไม่แน่ใจ", "item": "กรุงศรี jcb (28/04 12:00)", "amount": 2350.0}, {"id": "imp-tx-0213", "date": "2026-04-01", "type": "expense", "category": "ไม่แน่ใจ", "item": "ของทั่วไป (29/04 12:00)", "amount": 398.0}, {"id": "imp-tx-0214", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (30/04 12:00)", "amount": 446.0}, {"id": "imp-tx-0215", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ขนม (29/04 12:00)", "amount": 129.0}, {"id": "imp-tx-0216", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (29/04 12:00)", "amount": 90.0}, {"id": "imp-tx-0217", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ขนม (30/04 12:00)", "amount": 70.0}, {"id": "imp-tx-0218", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (29/04 12:00)", "amount": 65.0}, {"id": "imp-tx-0219", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (30/04 12:00)", "amount": 60.0}, {"id": "imp-tx-0220", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "มื้อเที่ยง (28/04 12:00)", "amount": 50.0}, {"id": "imp-tx-0221", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (29/04 12:00)", "amount": 40.0}, {"id": "imp-tx-0222", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ซื้อกาแฟ (28/04 12:00)", "amount": 40.0}, {"id": "imp-tx-0223", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (30/04 12:00)", "amount": 35.0}, {"id": "imp-tx-0224", "date": "2026-04-01", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "กาแฟ (28/04 12:00)", "amount": 30.0}, {"id": "imp-tx-0225", "date": "2026-04-01", "type": "expense", "category": "ที่อยู่อาศัย & สาธารณูปโภค", "item": "Internet (28/04 12:00)", "amount": 625.93}, {"id": "imp-tx-0226", "date": "2026-04-01", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ลงทุน dime (30/04 12:00)", "amount": 600.0}, {"id": "imp-tx-0227", "date": "2026-04-01", "type": "expense", "category": "ซอฟต์แวร์รายเดือน", "item": "Netflix+Youtube (28/04 12:00)", "amount": 233.0}, {"id": "imp-inc-ม.ค.", "date": "2026-01-31", "type": "income", "category": "รายรับรวมเดือน", "item": "ยอดรวมรายรับ ม.ค. (จากไฟล์เดิม ไม่มีรายละเอียดแยก)", "amount": 54678.0}, {"id": "imp-inc-ก.พ.", "date": "2026-02-28", "type": "income", "category": "รายรับรวมเดือน", "item": "ยอดรวมรายรับ ก.พ. (จากไฟล์เดิม ไม่มีรายละเอียดแยก)", "amount": 101914.0}, {"id": "imp-inc-มี.ค.", "date": "2026-03-31", "type": "income", "category": "รายรับรวมเดือน", "item": "ยอดรวมรายรับ มี.ค. (จากไฟล์เดิม ไม่มีรายละเอียดแยก)", "amount": 49461.0}, {"id": "imp-cat-ม.ค.-00", "date": "2026-01-31", "type": "expense", "category": "บัตรเครดิต", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 40115.0}, {"id": "imp-cat-ม.ค.-01", "date": "2026-01-31", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 9697.0}, {"id": "imp-cat-ม.ค.-02", "date": "2026-01-31", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 6000.0}, {"id": "imp-cat-ม.ค.-03", "date": "2026-01-31", "type": "expense", "category": "อื่นๆ", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 2395.0}, {"id": "imp-cat-ม.ค.-04", "date": "2026-01-31", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 1290.0}, {"id": "imp-cat-ม.ค.-05", "date": "2026-01-31", "type": "expense", "category": "ที่อยู่อาศัย & สาธารณูปโภค", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 626.0}, {"id": "imp-cat-ม.ค.-06", "date": "2026-01-31", "type": "expense", "category": "ค่าเดินทาง", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 280.0}, {"id": "imp-cat-ม.ค.-07", "date": "2026-01-31", "type": "expense", "category": "ซอฟต์แวร์รายเดือน", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 233.0}, {"id": "imp-cat-ม.ค.-08", "date": "2026-01-31", "type": "expense", "category": "สุขภาพ & ความงาม", "item": "ยอดรวมหมวด ม.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 80.0}, {"id": "imp-cat-ก.พ.-00", "date": "2026-02-28", "type": "expense", "category": "ไม่แน่ใจ", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 44742.0}, {"id": "imp-cat-ก.พ.-01", "date": "2026-02-28", "type": "expense", "category": "ค่าเดินทาง", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 16632.0}, {"id": "imp-cat-ก.พ.-02", "date": "2026-02-28", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 4319.0}, {"id": "imp-cat-ก.พ.-03", "date": "2026-02-28", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 4200.0}, {"id": "imp-cat-ก.พ.-04", "date": "2026-02-28", "type": "expense", "category": "ที่อยู่อาศัย & สาธารณูปโภค", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 626.0}, {"id": "imp-cat-ก.พ.-05", "date": "2026-02-28", "type": "expense", "category": "บัตรเครดิต", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 583.0}, {"id": "imp-cat-ก.พ.-06", "date": "2026-02-28", "type": "expense", "category": "ช้อปปิ้ง & บันเทิง", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 283.0}, {"id": "imp-cat-ก.พ.-07", "date": "2026-02-28", "type": "expense", "category": "ซอฟต์แวร์รายเดือน", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 233.0}, {"id": "imp-cat-ก.พ.-08", "date": "2026-02-28", "type": "expense", "category": "สุขภาพ & ความงาม", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 80.0}, {"id": "imp-cat-ก.พ.-09", "date": "2026-02-28", "type": "expense", "category": "อื่นๆ", "item": "ยอดรวมหมวด ก.พ. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 592.0}, {"id": "imp-cat-มี.ค.-00", "date": "2026-03-31", "type": "expense", "category": "บัตรเครดิต", "item": "ยอดรวมหมวด มี.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 24859.0}, {"id": "imp-cat-มี.ค.-01", "date": "2026-03-31", "type": "expense", "category": "อาหาร & เครื่องดื่ม", "item": "ยอดรวมหมวด มี.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 9474.0}, {"id": "imp-cat-มี.ค.-02", "date": "2026-03-31", "type": "expense", "category": "กีฬา", "item": "ยอดรวมหมวด มี.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 6900.0}, {"id": "imp-cat-มี.ค.-03", "date": "2026-03-31", "type": "expense", "category": "ออมเงิน & ลงทุน", "item": "ยอดรวมหมวด มี.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 5504.0}, {"id": "imp-cat-มี.ค.-04", "date": "2026-03-31", "type": "expense", "category": "สุขภาพ & ความงาม", "item": "ยอดรวมหมวด มี.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 1799.0}, {"id": "imp-cat-มี.ค.-05", "date": "2026-03-31", "type": "expense", "category": "ไม่แน่ใจ", "item": "ยอดรวมหมวด มี.ค. (จากไฟล์เดิม ไม่มีรายการย่อย)", "amount": 3469.0}], "taxSlips": [{"id": "01_2569", "year": "2569", "month": 1, "type": "salary", "gross": 45549.64, "withheld": 1123.28, "sso": 0, "pvd": 2233.5}, {"id": "02_2569", "year": "2569", "month": 2, "type": "salary", "gross": 46584.43, "withheld": 954.04, "sso": 0, "pvd": 2233.5}, {"id": "03_2569", "year": "2569", "month": 3, "type": "salary", "gross": 46265.36, "withheld": 1638.12, "sso": 0, "pvd": 2233.5}, {"id": "04_2569", "year": "2569", "month": 4, "type": "salary", "gross": 46265.36, "withheld": 922.12, "sso": 0, "pvd": 2233.5}, {"id": "05_2569", "year": "2569", "month": 5, "type": "salary", "gross": 47860.72, "withheld": 1171, "sso": 0, "pvd": 1340.1}, {"id": "06_2569", "year": "2569", "month": 6, "type": "salary", "gross": 47860.72, "withheld": 1171, "sso": 0, "pvd": 1340.1}, {"id": "โบนัส_1_2569", "year": "2569", "month": 4, "type": "bonus", "gross": 123932.22, "withheld": 12393.23, "sso": 0, "pvd": 0}, {"id": "โบนัส_2_2569", "year": "2569", "month": 5, "type": "bonus", "gross": 19416.04, "withheld": 1941.61, "sso": 0, "pvd": 0}], "assets": [{"name": "กองทุน PVD", "type": "กองทุน", "units": 1, "cost": 950000, "price": 950000, "cur": "THB", "id": "imp-a-pvd"}, {"name": "สหกรณ์ออมทรัพย์", "type": "อื่นๆ", "units": 1, "cost": 310000, "price": 310000, "cur": "THB", "id": "imp-a-coop"}, {"name": "IVV", "type": "US ETF", "units": 0.214272, "cost": 688.7507, "price": 751.08, "cur": "USD", "id": "imp-a-ivv"}, {"name": "QQQM", "type": "US ETF", "units": 0.5156489, "cost": 256.1045, "price": 292.14, "cur": "USD", "id": "imp-a-qqqm"}, {"name": "VEA", "type": "US ETF", "units": 0.8419284, "cost": 67.191, "price": 70.78, "cur": "USD", "id": "imp-a-vea"}, {"name": "AGG", "type": "US ETF", "units": 0.7367484, "cost": 98.2018, "price": 98.21, "cur": "USD", "id": "imp-a-agg"}, {"name": "TSLA", "type": "US Stock", "units": 0.0733755, "cost": 398.9068, "price": 402.9, "cur": "USD", "id": "imp-a-tsla"}, {"name": "SPCX", "type": "US Stock", "units": 0.2909486, "cost": 169.5489, "price": 149.47, "cur": "USD", "id": "imp-a-spcx"}, {"name": "MSTR", "type": "US Stock", "units": 3.1789085, "cost": 121.1265, "price": 97.36, "cur": "USD", "id": "imp-a-mstr"}, {"name": "MSTY", "type": "US ETF", "units": 3.7976794, "cost": 16.8577, "price": 13.25, "cur": "USD", "id": "imp-a-msty"}, {"name": "YMAG", "type": "US ETF", "units": 2.816605, "cost": 12.0997, "price": 11.7, "cur": "USD", "id": "imp-a-ymag"}, {"name": "BTC", "type": "Crypto", "units": 0.00294606, "cost": 2026000, "price": 2083897.6, "cur": "THB", "id": "imp-a-btc"}, {"name": "MST-GOLD (ทองคำ)", "type": "ทอง", "units": 0.0242, "cost": 4240.86, "price": 4240.86, "cur": "USD", "id": "imp-a-gold"}, {"name": "BBJP", "type": "US ETF", "units": 0.0793619, "cost": 75.099, "price": 75.18, "cur": "USD", "id": "imp-a-bbjp"}], "debts": [{"id": "imp-d-1", "name": "สามัญ เงินฝาก", "type": "สินเชื่อรถ", "balance": 400000, "rate": 3.6, "payment": 3731.21, "note": "สอ กฟผ"}, {"id": "imp-d-2", "name": "สามัญ", "type": "สินเชื่อรถ", "balance": 395695.73, "rate": 4.25, "payment": 3902.98, "note": "สอ กฟผ"}, {"id": "imp-d-3", "name": "สามัญ หุ้น 95%", "type": "สินเชื่อส่วนบุคคล", "balance": 205000, "rate": 3.9, "payment": 1907.12, "note": "สอ กฟผ"}], "fx": 33.2, "health": []};
 
+let DELETED_SEED_IDS = new Set();     // id ของรายการ (เงิน/หนี้สิน/สุขภาพ) ที่ผู้ใช้ลบไปแล้ว — ห้าม merge กลับมาอีก
+let DELETED_SEED_NAMES = new Set();   // ชื่อสินทรัพย์ (lowercase) ที่ผู้ใช้ลบไปแล้ว — สินทรัพย์ merge กันด้วยชื่อ ไม่ใช่ id
+async function markSeedDeleted(id){
+  if(id && id.startsWith('imp-')){ DELETED_SEED_IDS.add(id); await sSet('app:deletedSeedIds', [...DELETED_SEED_IDS]); }
+}
+async function markSeedNameDeleted(name){
+  if(!name) return;
+  DELETED_SEED_NAMES.add(name.trim().toLowerCase());
+  await sSet('app:deletedSeedNames', [...DELETED_SEED_NAMES]);
+}
 async function mergePending(){
   const alreadyDone = await sGet('app:pendingImportApplied', false);
   if(alreadyDone) return;   // นำเข้าข้อมูลตั้งต้นแค่ครั้งเดียวตลอดไป กันไม่ให้รายการที่ลบไปแล้วโผล่กลับมาใหม่ทุกครั้งที่รีเฟรช
   let changed = false;
   if(PENDING_IMPORT.money.length){
     const ids = new Set(MONEY.map(e=>e.id));
-    PENDING_IMPORT.money.forEach(e=>{ if(!ids.has(e.id)){ MONEY.push(e); changed=true; } });
+    PENDING_IMPORT.money.forEach(e=>{ if(!ids.has(e.id) && !DELETED_SEED_IDS.has(e.id)){ MONEY.push(e); changed=true; } });
     if(changed) await saveMoney();
   }
   if(PENDING_IMPORT.taxSlips.length){
@@ -3138,13 +3301,14 @@ async function mergePending(){
     PENDING_IMPORT.taxSlips.forEach(s=>{
       const yr = String(s.year||curTaxYear);
       if(!TAX[yr]) TAX[yr] = {slips:[], ded:{}};
-      if(!TAX[yr].slips.some(x=>x.id===s.id)){ TAX[yr].slips.push(s); tChanged=true; }
+      if(!TAX[yr].slips.some(x=>x.id===s.id) && !DELETED_SEED_IDS.has(s.id)){ TAX[yr].slips.push(s); tChanged=true; }
     });
     if(tChanged){ await saveTax(); changed=true; }
   }
   if(PENDING_IMPORT.assets.length){
     let aChanged = false;
     PENDING_IMPORT.assets.forEach(a=>{
+      if(DELETED_SEED_NAMES.has(a.name.trim().toLowerCase())) return;   // ผู้ใช้ลบสินทรัพย์นี้ไปแล้ว ห้ามคืนกลับมา
       const ex = ASSETS.list.find(x=>x.name.toLowerCase()===a.name.toLowerCase());
       if(ex){ Object.assign(ex, a, {id: ex.id}); } else { ASSETS.list.push(a); }
       aChanged = true;
@@ -3155,7 +3319,7 @@ async function mergePending(){
     if(!ASSETS.debts) ASSETS.debts = [];
     const dids = new Set(ASSETS.debts.map(d=>d.id));
     let dChanged = false;
-    PENDING_IMPORT.debts.forEach(d=>{ if(!dids.has(d.id)){ ASSETS.debts.push(d); dChanged=true; } });
+    PENDING_IMPORT.debts.forEach(d=>{ if(!dids.has(d.id) && !DELETED_SEED_IDS.has(d.id)){ ASSETS.debts.push(d); dChanged=true; } });
     if(dChanged){ await saveAssets(); changed=true; }
   }
   if(PENDING_IMPORT.deductions){
@@ -3172,7 +3336,7 @@ async function mergePending(){
   if(PENDING_IMPORT.health && PENDING_IMPORT.health.length){
     const ids = new Set(HEALTH.logs.map(l=>l.id));
     let hChanged=false;
-    PENDING_IMPORT.health.forEach(l=>{ if(!ids.has(l.id)){ HEALTH.logs.push(l); hChanged=true; } });
+    PENDING_IMPORT.health.forEach(l=>{ if(!ids.has(l.id) && !DELETED_SEED_IDS.has(l.id)){ HEALTH.logs.push(l); hChanged=true; } });
     if(hChanged){ await saveHealth(); changed=true; }
   }
   if(changed) toast('✓ นำเข้าข้อมูลจากแชทแล้ว');
@@ -3634,6 +3798,8 @@ document.getElementById('pf-save').onclick = async ()=>{
     PROFILES = await sGet('app:profiles', []);
     activeProfileId = await sGet('app:activeProfile', 'default');
     ensureDefaultProfile();
+    DELETED_SEED_IDS = new Set(await sGet('app:deletedSeedIds', []));
+    DELETED_SEED_NAMES = new Set(await sGet('app:deletedSeedNames', []));
     if(!ASSETS.fx) ASSETS.fx = 34;
     if(!ASSETS.debts) ASSETS.debts = [];
     if(ASSETS.apiKey === undefined) ASSETS.apiKey = '';
