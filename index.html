@@ -3750,7 +3750,8 @@ function ensureDefaultProfile(){
 }
 function applyProfileFeatures(){
   const prof = PROFILES.find(p=>p.id===activeProfileId) || PROFILES[0];
-  const enabled = new Set(prof.features||[]);
+  let enabled = new Set(prof.features||[]);
+  if(!enabled.size){ enabled = new Set(['money']); prof.features = ['money']; saveProfiles(); }   // กันไม่ให้ค้างแบบไม่มีเมนูให้กดเลย
   document.querySelectorAll('.bnav button[data-v]').forEach(b=>{
     const v = b.dataset.v;
     if(v==='home' || v==='settings'){ b.style.display=''; return; }
@@ -3808,6 +3809,7 @@ document.getElementById('pf-save').onclick = async ()=>{
   if(!name){ toast('ใส่ชื่อโปรไฟล์ก่อน'); return; }
   const icon = document.getElementById('pf-icon').value.trim();
   const features = [...document.querySelectorAll('[data-pf-feat]')].filter(c=>c.checked).map(c=>c.dataset.pfFeat);
+  if(!features.length){ toast('⚠️ ต้องเลือกอย่างน้อย 1 ฟังก์ชัน ไม่งั้นจะสลับไปใช้แล้วหาเมนูไม่เจอ'); return; }
   if(pfEditingId){
     const prof = PROFILES.find(p=>p.id===pfEditingId);
     prof.name = name; prof.icon = icon; prof.features = features;
@@ -3820,7 +3822,7 @@ document.getElementById('pf-save').onclick = async ()=>{
   document.getElementById('profile-editor').style.display = 'none';
   pfEditingId = null;
   renderProfileList(); applyProfileFeatures();
-  toast('✓ บันทึกโปรไฟล์แล้ว');
+  toast('✓ บันทึกโปรไฟล์แล้ว — สลับไปใช้งานให้อัตโนมัติ');
 };
 
 (async function(){
