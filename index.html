@@ -965,7 +965,7 @@
         <button class="btn ghost" onclick="document.getElementById('s-import-file').click()">นำเข้าจากไฟล์ Backup</button>
         <input type="file" id="s-import-file" accept=".json,application/json,text/plain,*/*" style="display:none">
       </div>
-      <div class="hint">Backup รวมข้อมูลการเงิน + สุขภาพ + รายชื่อโปรไฟล์และธีมสีทั้งหมด (ไม่รวมไฟล์แนบผลตรวจ) — import จากไฟล์ backup ของเวอร์ชันเก่าได้เลย · <b>หมายเหตุ:</b> ถ้ามีหลายโปรไฟล์ที่มีข้อมูลจริงแยกกัน backup จะพกข้อมูลของโปรไฟล์ที่ "กำลังใช้งานอยู่ตอน export" ไปด้วยเท่านั้น โปรไฟล์อื่นต้องสลับไปที่โปรไฟล์นั้นแล้ว export/import แยกอีกรอบ</div>
+      <div class="hint">Backup รวมข้อมูลทุกโปรไฟล์ครบ (เงิน/ภาษี/พอร์ต/เป้าหมาย/สุขภาพ/หมวดหมู่) พร้อมชื่อ ไอคอน และธีมสีของแต่ละโปรไฟล์ (ไม่รวมไฟล์แนบผลตรวจ) — import ไฟล์นี้ที่เครื่อง/เบราว์เซอร์ไหนก็ได้ข้อมูลครบเหมือนต้นทางทุกประการ</div>
     </div>
 
     <div class="card">
@@ -1144,6 +1144,25 @@ function setSync(ok){
 }
 /* โปรไฟล์ "หลัก" ใช้คีย์เดิม (ข้อมูลเก่าไม่ต้องย้าย) ส่วนโปรไฟล์อื่นแยกชุดข้อมูลของตัวเอง เริ่มต้นว่างเปล่า */
 function pKey(key){ return activeProfileId==='default' ? key : ('profile:'+activeProfileId+':'+key); }
+function pKeyFor(id, key){ return id==='default' ? key : ('profile:'+id+':'+key); }
+async function readProfileData(id){
+  return {
+    money: await sGet(pKeyFor(id,'money:entries'), []),
+    tax: await sGet(pKeyFor(id,'tax:data'), {}),
+    assets: await sGet(pKeyFor(id,'assets:data'), {fx:34, list:[], debts:[], apiKey:''}),
+    goals: await sGet(pKeyFor(id,'goals:data'), {birthdate:'', items:[]}),
+    health: await sGet(pKeyFor(id,'health:data'), {logs:[], checkups:[]}),
+    catRules: await sGet(pKeyFor(id,'money:catrules'), {})
+  };
+}
+async function writeProfileData(id, d){
+  if(d.money!==undefined) await sSet(pKeyFor(id,'money:entries'), d.money);
+  if(d.tax!==undefined) await sSet(pKeyFor(id,'tax:data'), d.tax);
+  if(d.assets!==undefined) await sSet(pKeyFor(id,'assets:data'), d.assets);
+  if(d.goals!==undefined) await sSet(pKeyFor(id,'goals:data'), d.goals);
+  if(d.health!==undefined) await sSet(pKeyFor(id,'health:data'), d.health);
+  if(d.catRules!==undefined) await sSet(pKeyFor(id,'money:catrules'), d.catRules);
+}
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -3343,9 +3362,10 @@ function renderGoals(){
 document.getElementById('h-goal-teaser').addEventListener('click', ()=>show('goals'));
 
 /* ════════ SETTINGS ════════ */
-document.getElementById('s-export').onclick = ()=>{
-  const blob = new Blob([JSON.stringify({money:MONEY, tax:TAX, assets:ASSETS, goals:GOALS, health:HEALTH,
-    profiles:PROFILES, activeProfileId, catRules:CAT_RULES, exported:new Date().toISOString()},null,2)],{type:'application/json'});
+document.getElementById('s-export').onclick = async ()=>{
+  const allProfileData = {};
+  for(const p of PROFILES){ allProfileData[p.id] = await readProfileData(p.id); }
+  const blob = new Blob([JSON.stringify({profiles:PROFILES, activeProfileId, allProfileData, exported:new Date().toISOString()},null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'milk-hub-backup-' + new Date().toISOString().slice(0,10) + '.json';
@@ -3360,19 +3380,24 @@ document.getElementById('s-import-file').onchange = async e=>{
       PROFILES = data.profiles;
       if(data.activeProfileId && PROFILES.find(p=>p.id===data.activeProfileId)) activeProfileId = data.activeProfileId;
       ensureDefaultProfile();
-      await saveProfiles();   // ตั้งโปรไฟล์/ธีมให้ตรงก่อน แล้วค่อยเซฟข้อมูลด้านล่าง จะได้ลงคีย์ที่ผูกกับโปรไฟล์ถูกต้อง
-      if(data.catRules){ CAT_RULES = data.catRules; await saveCatRules(); }
-      const prof = PROFILES.find(p=>p.id===activeProfileId);
-      applyTheme(prof ? prof.theme : 'purple');
-      updateProfileBadge();
+      await saveProfiles();   // ตั้งโปรไฟล์/ธีมให้ตรงก่อน แล้วค่อยเขียนข้อมูลด้านล่าง จะได้ลงคีย์ที่ผูกกับแต่ละโปรไฟล์ถูกต้อง
       profileMsg = ` (รวมโปรไฟล์ ${PROFILES.length} อัน + ธีมสี)`;
     }
-    if(data.money) MONEY = data.money;
-    if(data.tax) TAX = data.tax;
-    if(data.assets) ASSETS = data.assets;
-    if(data.goals) GOALS = data.goals;
-    if(data.health) HEALTH = data.health;
-    await saveMoney(); await saveTax(); await saveAssets(); await saveGoals(); await saveHealth();
+    if(data.allProfileData){
+      // รูปแบบใหม่: มีข้อมูลของทุกโปรไฟล์ ครบ — เขียนกลับเข้าคีย์ของแต่ละโปรไฟล์ตรงๆ
+      for(const id in data.allProfileData){ await writeProfileData(id, data.allProfileData[id]); }
+      profileMsg += ` — ได้ข้อมูลครบทุกโปรไฟล์ (${Object.keys(data.allProfileData).length} โปรไฟล์)`;
+    } else {
+      // รูปแบบเก่า: มีแค่ข้อมูลโปรไฟล์เดียว (ที่ active ตอน export) — ใส่ให้โปรไฟล์ที่ active อยู่ตอนนี้
+      if(data.money) MONEY = data.money;
+      if(data.tax) TAX = data.tax;
+      if(data.assets) ASSETS = data.assets;
+      if(data.goals) GOALS = data.goals;
+      if(data.health) HEALTH = data.health;
+      if(data.catRules) CAT_RULES = data.catRules;
+      await saveMoney(); await saveTax(); await saveAssets(); await saveGoals(); await saveHealth(); await saveCatRules();
+    }
+    await loadProfileData();   // โหลดข้อมูล+ธีมของโปรไฟล์ที่ active อยู่ตอนนี้เข้าหน่วยความจำ ให้ตรงกับที่เพิ่งเขียนลงไป
     renderProfileList(); applyProfileFeatures();
     renderAll(); toast('✓ นำเข้าข้อมูลสำเร็จ'+profileMsg);
   }catch(err){ toast('⚠️ ไฟล์ไม่ถูกต้อง'); }
@@ -3706,15 +3731,16 @@ async function odGetToken(interactive){
     }catch(e2){ console.error(e2); toast('⚠️ ล็อกอินไม่สำเร็จ'); return null; }
   }
 }
-function odBackupPayload(){
-  return JSON.stringify({money:MONEY, tax:TAX, assets:ASSETS, goals:GOALS, health:HEALTH,
-    profiles:PROFILES, activeProfileId, catRules:CAT_RULES, exported:new Date().toISOString()});
+async function odBackupPayload(){
+  const allProfileData = {};
+  for(const p of PROFILES){ allProfileData[p.id] = await readProfileData(p.id); }
+  return JSON.stringify({profiles:PROFILES, activeProfileId, allProfileData, exported:new Date().toISOString()});
 }
 async function odWebhookUpload(interactive){
   if(!odConfig.webhookUrl){ if(interactive) toast('ใส่ Webhook URL ก่อน (ดูวิธีตั้งค่าด้านล่าง)'); return false; }
   odSetStatus('on','กำลังส่งข้อมูล…');
   try{
-    const res = await fetch(odConfig.webhookUrl, { method:'POST', body: odBackupPayload() });
+    const res = await fetch(odConfig.webhookUrl, { method:'POST', body: await odBackupPayload() });
     if(!res.ok) throw new Error('HTTP '+res.status);
     odConfig.lastSync = new Date().toISOString(); await odSaveConfig(); odSetLast();
     odSetStatus('on','เชื่อมต่อแล้ว');
@@ -3727,7 +3753,7 @@ async function odUpload(interactive){
   odSetStatus('on','กำลังสำรองขึ้น OneDrive…');
   try{
     const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/special/approot:/${OD_FILE}:/content`, {
-      method:'PUT', headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' }, body: odBackupPayload()
+      method:'PUT', headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' }, body: await odBackupPayload()
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
     odConfig.lastSync = new Date().toISOString(); await odSaveConfig(); odSetLast();
@@ -3752,17 +3778,19 @@ async function odRestore(){
       if(data.activeProfileId && PROFILES.find(p=>p.id===data.activeProfileId)) activeProfileId = data.activeProfileId;
       ensureDefaultProfile();
       await saveProfiles();
-      if(data.catRules){ CAT_RULES = data.catRules; await saveCatRules(); }
-      const prof = PROFILES.find(p=>p.id===activeProfileId);
-      applyTheme(prof ? prof.theme : 'purple');
-      updateProfileBadge();
-      renderProfileList(); applyProfileFeatures();
     }
-    if(data.money) { MONEY = data.money; await saveMoney(); }
-    if(data.tax)   { TAX = data.tax; await saveTax(); }
-    if(data.assets){ ASSETS = data.assets; await saveAssets(); }
-    if(data.goals) { GOALS = data.goals; await saveGoals(); }
-    if(data.health){ HEALTH = data.health; await saveHealth(); }
+    if(data.allProfileData){
+      for(const id in data.allProfileData){ await writeProfileData(id, data.allProfileData[id]); }
+    } else {
+      if(data.money) await sSet(pKey('money:entries'), data.money);
+      if(data.tax) await sSet(pKey('tax:data'), data.tax);
+      if(data.assets) await sSet(pKey('assets:data'), data.assets);
+      if(data.goals) await sSet(pKey('goals:data'), data.goals);
+      if(data.health) await sSet(pKey('health:data'), data.health);
+      if(data.catRules) await sSet(pKey('money:catrules'), data.catRules);
+    }
+    await loadProfileData();
+    renderProfileList(); applyProfileFeatures();
     renderAll();
     odSetStatus('on','เชื่อมต่อแล้ว'); toast('✓ กู้คืนข้อมูลจาก OneDrive แล้ว');
   }catch(e){ console.error(e); odSetStatus('err','กู้คืนไม่สำเร็จ'); }
