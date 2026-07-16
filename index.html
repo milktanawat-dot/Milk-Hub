@@ -49,6 +49,8 @@
   .sync-dot.err::before{background:var(--red);}
   .gear{width:34px; height:34px; border-radius:11px; background:var(--card); border:none; cursor:pointer;
     font-size:15px; box-shadow:var(--shadow); color:var(--dim);}
+  .profile-badge-btn{border:none; background:var(--pri-soft); color:var(--pri); font-family:inherit; font-weight:700;
+    font-size:11.5px; padding:7px 12px; border-radius:99px; cursor:pointer; box-shadow:var(--shadow); white-space:nowrap;}
 
   /* ── Hero card (signature) ── */
   .hero{position:relative; border-radius:22px; padding:20px 20px 18px; margin-bottom:16px; color:#fff; overflow:hidden;
@@ -97,6 +99,9 @@
   .m-mode-btn{border:1px solid var(--line); background:var(--card2); color:var(--dim); border-radius:99px;
     padding:6px 14px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;}
   .m-mode-btn.on{background:linear-gradient(135deg,var(--pri),var(--pri2)); color:#fff; border-color:transparent;}
+  .theme-swatch{width:38px; height:38px; border-radius:50%; border:2.5px solid transparent; cursor:pointer; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:13px; transition:.15s;}
+  .theme-swatch.on{border-color:var(--ink); transform:scale(1.08);}
   .m-custom-panel{display:flex; align-items:flex-end; gap:9px; flex-wrap:wrap; background:var(--card2);
     border-radius:14px; padding:11px 12px; margin-bottom:13px;}
   .m-custom-panel label{flex:1; min-width:120px;}
@@ -373,6 +378,7 @@
       <div class="sub">การเงิน + สุขภาพ ในที่เดียว — บันทึกในเครื่องนี้ ใช้แบบออฟไลน์ได้</div>
     </div>
     <div class="h-right">
+      <button class="profile-badge-btn" id="profile-badge" data-go="settings">👑 หลัก</button>
       <div class="sync-dot" id="syncDot">เชื่อมต่อ…</div>
       <button class="gear" data-go="settings">⚙️</button>
     </div>
@@ -941,6 +947,8 @@
           <input id="pf-icon" maxlength="2" placeholder="🙂" style="width:52px; text-align:center; border:1px solid var(--line); border-radius:11px; padding:9px; font-size:16px; background:var(--card); color:var(--ink)">
           <div style="flex:1; font-size:11px; color:var(--dim); align-self:center">ใส่อีโมจิแทนไอคอนโปรไฟล์ (ไม่ใส่ก็ได้)</div>
         </div>
+        <div style="font-size:11px; color:var(--dim); margin-bottom:6px">โทนสี (แนวพาสเทล)</div>
+        <div id="pf-theme-list" style="display:flex; gap:8px; margin-bottom:11px; flex-wrap:wrap"></div>
         <div id="pf-feature-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:11px"></div>
         <div style="display:flex; gap:8px">
           <button class="btn ghost sm" id="pf-cancel" style="flex:1">ยกเลิก</button>
@@ -1133,6 +1141,8 @@ function setSync(ok){
   d.className = 'sync-dot ' + (ok ? 'ok' : 'err');
   d.textContent = ok ? 'บันทึกในเครื่องนี้' : 'บันทึกไม่ได้';
 }
+/* โปรไฟล์ "หลัก" ใช้คีย์เดิม (ข้อมูลเก่าไม่ต้องย้าย) ส่วนโปรไฟล์อื่นแยกชุดข้อมูลของตัวเอง เริ่มต้นว่างเปล่า */
+function pKey(key){ return activeProfileId==='default' ? key : ('profile:'+activeProfileId+':'+key); }
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -1160,7 +1170,7 @@ function show(v){
 }
 
 /* ════════ MONEY ════════ */
-async function saveMoney(){ await sSet('money:entries', MONEY); }
+async function saveMoney(){ await sSet(pKey('money:entries'), MONEY); }
 let curMoneyYM = null;   // 'YYYY-MM' — เดือนที่กำลังดูอยู่ในแท็บเงิน
 let curMoneyYear = null;   // 'YYYY' — ปีที่กำลังดูอยู่ (โหมดปี)
 let moneyViewMode = 'month';   // 'month' | 'year' | 'custom'
@@ -1563,7 +1573,7 @@ function dedItemsTotal(dd){
   });
   return t;
 }
-async function saveTax(){ await sSet('tax:data', TAX); }
+async function saveTax(){ await sSet(pKey('tax:data'), TAX); }
 // ขั้นบันไดภาษีเงินได้บุคคลธรรมดาไทย (เงินได้สุทธิ, อัตรา) — ใช้ร่วมกันทั้งคำนวณภาษีรวม และคำนวณขั้นบันไดปัจจุบัน
 const TAX_BRACKETS = [[150000,0],[300000,.05],[500000,.10],[750000,.15],[1000000,.20],[2000000,.25],[5000000,.30],[Infinity,.35]];
 function calcThaiTax(net){
@@ -1676,7 +1686,7 @@ document.getElementById('d-save').onclick = async ()=>{
 document.getElementById('t-year').onchange = e=>{ curTaxYear = e.target.value; renderTax(); };
 
 /* ════════ ASSETS ════════ */
-async function saveAssets(){ await sSet('assets:data', ASSETS); }
+async function saveAssets(){ await sSet(pKey('assets:data'), ASSETS); }
 function assetTHB(a){ return a.units * a.price * (a.cur==='USD' ? ASSETS.fx : 1); }
 function assetCostTHB(a){ return a.units * a.cost * (a.cur==='USD' ? ASSETS.fx : 1); }
 const ASSET_COLORS = ['#8E7BFF','#3E8EF0','#12A97C','#F0980F','#EA4D67','#25C6DE','#FF9F68','#F97FB5','#6C5CE7','#A6A3C4'];
@@ -2056,7 +2066,7 @@ document.getElementById('db-add').onclick = async ()=>{
 };
 
 /* ════════ HEALTH ════════ */
-async function saveHealth(){ await sSet('health:data', HEALTH); }
+async function saveHealth(){ await sSet(pKey('health:data'), HEALTH); }
 function renderHealth(){
   const logs = [...HEALTH.logs].sort((a,b)=>a.date.localeCompare(b.date));
   const withWeight = logs.filter(l=>l.weight);
@@ -2385,7 +2395,7 @@ function renderHome(){
 // โครงสร้าง: GOALS = { birthdate, items:[] } — แต่ละเป้าหมายผูกกับ "สินทรัพย์รายตัว" หรือ "พอร์ตรวม/Net Worth"
 // ใช้หลักการเดียวกับ Dashboard ทรัพย์สิน: วันเกิด+อายุเกษียณ → ปีที่เหลือ, ลงทุนเพิ่ม/เดือน, ผลตอบแทนคาดหวัง/ปี
 // แล้วจำลองเส้นทางทบต้นรายเดือนจากมูลค่าปัจจุบันจริงจนถึงอายุเกษียณ
-async function saveGoals(){ await sSet('goals:data', GOALS); }
+async function saveGoals(){ await sSet(pKey('goals:data'), GOALS); }
 
 // รายการที่เลือกได้ในช่อง "ผูกเป้าหมายกับ" — ตัดตัวที่มีเป้าหมายอยู่แล้วออก (กันสร้างซ้ำ/กันงงว่ามีอะไรผูกไว้บ้าง)
 // keepTargetId = target ของเป้าหมายที่กำลังแก้ไขอยู่ (ถ้ามี) ให้โชว์ตัวเลือกนั้นค้างไว้แม้จะ "ถูกใช้แล้ว" เพราะเป็นของตัวเองอยู่แล้ว
@@ -3325,6 +3335,7 @@ async function markSeedNameDeleted(name){
   await sSet('app:deletedSeedNames', [...DELETED_SEED_NAMES]);
 }
 async function mergePending(){
+  if(activeProfileId!=='default') return;   // ข้อมูลตั้งต้นผูกกับโปรไฟล์หลักเท่านั้น โปรไฟล์อื่นเริ่มต้นว่างเปล่าเสมอ
   const alreadyDone = await sGet('app:pendingImportApplied', false);
   if(alreadyDone) return;   // นำเข้าข้อมูลตั้งต้นแค่ครั้งเดียวตลอดไป กันไม่ให้รายการที่ลบไปแล้วโผล่กลับมาใหม่ทุกครั้งที่รีเฟรช
   let changed = false;
@@ -3398,7 +3409,7 @@ const CHAT_CAT_RULES = [
 const CHAT_INCOME_KW = ['เงินเดือน','โบนัส','รายรับ','ได้เงิน','ได้รับ','รับเงิน','เงินคืน','คืนเงิน','ขายได้','ขายหุ้น','ปันผล','ดอกเบี้ย','ถูกหวย','ถูกลอตเตอรี่','เบี้ยเลี้ยง','โอที','ค่าเวร'];
 
 let CAT_RULES = {};   // { 'item text (lowercase)': 'หมวดที่ผู้ใช้แก้ไขไว้' } — เรียนรู้จากการแก้ไขหมวดหมู่ในตาราง
-async function saveCatRules(){ await sSet('money:catrules', CAT_RULES); }
+async function saveCatRules(){ await sSet(pKey('money:catrules'), CAT_RULES); }
 function chatGuessCategory(text, type){
   const low = text.toLowerCase();
   if(type==='income'){
@@ -3656,7 +3667,7 @@ async function odRestore(){
     if(data.money) { MONEY = data.money; await saveMoney(); }
     if(data.tax)   { TAX = data.tax; await saveTax(); }
     if(data.assets){ ASSETS = data.assets; await saveAssets(); }
-    if(data.goals) { GOALS = data.goals; await sSet('goals:data', GOALS); }
+    if(data.goals) { GOALS = data.goals; await saveGoals(); }
     if(data.health){ HEALTH = data.health; await saveHealth(); }
     renderAll();
     odSetStatus('on','เชื่อมต่อแล้ว'); toast('✓ กู้คืนข้อมูลจาก OneDrive แล้ว');
@@ -3738,15 +3749,53 @@ const APP_FEATURES = [
   {id:'goals',  label:'เป้าหมาย',               icon:'🎯'},
   {id:'health', label:'สุขภาพ',                 icon:'💗'},
 ];
+const THEME_PRESETS = [
+  {id:'purple', name:'ม่วง',   bg:'#ECEBFA', bg2:'#E3E1F7', pri:'#6C5CE7', pri2:'#8E7BFF', priSoft:'#EFECFF'},
+  {id:'blue',   name:'ฟ้า',    bg:'#E8F1FC', bg2:'#DCEAFA', pri:'#3E8EF0', pri2:'#6BA8F5', priSoft:'#E7F1FE'},
+  {id:'green',  name:'มินต์',  bg:'#E7F8F1', bg2:'#DBF3E9', pri:'#12A97C', pri2:'#3FC69B', priSoft:'#E2F7EF'},
+  {id:'pink',   name:'ชมพู',   bg:'#FCE9F0', bg2:'#FADCE9', pri:'#E0578A', pri2:'#EB7CA6', priSoft:'#FDE9F1'},
+  {id:'orange', name:'ส้ม',    bg:'#FDF1E6', bg2:'#FBE7D2', pri:'#F0980F', pri2:'#F5B44A', priSoft:'#FEF3DE'},
+  {id:'teal',   name:'เขียวเทา', bg:'#E5F6F6', bg2:'#D8F0F0', pri:'#17A2A8', pri2:'#4CC3C8', priSoft:'#E2F6F6'},
+];
+function applyTheme(themeId){
+  const t = THEME_PRESETS.find(x=>x.id===themeId) || THEME_PRESETS[0];
+  const r = document.documentElement.style;
+  r.setProperty('--bg', t.bg); r.setProperty('--bg2', t.bg2);
+  r.setProperty('--pri', t.pri); r.setProperty('--pri2', t.pri2); r.setProperty('--pri-soft', t.priSoft);
+}
 let PROFILES = [];
 let activeProfileId = 'default';
 async function saveProfiles(){ await sSet('app:profiles', PROFILES); await sSet('app:activeProfile', activeProfileId); }
 function ensureDefaultProfile(){
   if(!PROFILES.length){
-    PROFILES = [{ id:'default', name:'หลัก (ทุกฟังก์ชัน)', icon:'👑', features: APP_FEATURES.map(f=>f.id) }];
+    PROFILES = [{ id:'default', name:'หลัก (ทุกฟังก์ชัน)', icon:'👑', theme:'purple', features: APP_FEATURES.map(f=>f.id) }];
     activeProfileId = 'default';
   }
+  PROFILES.forEach(p=>{ if(!p.theme) p.theme = 'purple'; });
   if(!PROFILES.find(p=>p.id===activeProfileId)) activeProfileId = PROFILES[0].id;
+}
+async function loadProfileData(){
+  MONEY = await sGet(pKey('money:entries'), []);
+  TAX = await sGet(pKey('tax:data'), {});
+  ASSETS = await sGet(pKey('assets:data'), {fx:34, list:[], debts:[], apiKey:''});
+  GOALS = await sGet(pKey('goals:data'), {birthdate:'', items:[]});
+  HEALTH = await sGet(pKey('health:data'), {logs:[], checkups:[]});
+  CAT_RULES = await sGet(pKey('money:catrules'), {});
+  if(!ASSETS.fx) ASSETS.fx = 34;
+  if(!ASSETS.debts) ASSETS.debts = [];
+  if(ASSETS.apiKey === undefined) ASSETS.apiKey = '';
+  if(!GOALS.items) GOALS.items = [];
+  if(GOALS.birthdate===undefined) GOALS.birthdate = '';
+  if(!HEALTH.logs) HEALTH.logs = [];
+  if(!HEALTH.checkups) HEALTH.checkups = [];
+  const prof = PROFILES.find(p=>p.id===activeProfileId);
+  applyTheme(prof ? prof.theme : 'purple');
+  updateProfileBadge();
+}
+function updateProfileBadge(){
+  const prof = PROFILES.find(p=>p.id===activeProfileId) || PROFILES[0];
+  const badge = document.getElementById('profile-badge');
+  if(badge && prof) badge.textContent = (prof.icon||'👤') + ' ' + prof.name;
 }
 function applyProfileFeatures(){
   const prof = PROFILES.find(p=>p.id===activeProfileId) || PROFILES[0];
@@ -3765,8 +3814,10 @@ function renderProfileList(){
   box.innerHTML = PROFILES.map(p=>{
     const isActive = p.id===activeProfileId;
     const featTxt = (p.features||[]).map(fid=>APP_FEATURES.find(f=>f.id===fid)?.icon||'').join(' ') || '—';
+    const theme = THEME_PRESETS.find(t=>t.id===p.theme) || THEME_PRESETS[0];
     return `
     <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:13px; background:${isActive?'var(--pri-soft)':'var(--card2)'}">
+      <div style="width:14px; height:14px; border-radius:50%; flex-shrink:0; background:linear-gradient(135deg,${theme.pri},${theme.pri2})"></div>
       <div style="font-size:19px">${p.icon||'👤'}</div>
       <div style="flex:1; min-width:0">
         <div style="font-weight:800; font-size:13px">${esc(p.name)} ${isActive?'<span style=\"color:var(--pri); font-size:10.5px\">· ใช้งานอยู่</span>':''}</div>
@@ -3778,22 +3829,30 @@ function renderProfileList(){
     </div>`;
   }).join('');
   document.querySelectorAll('[data-pf-switch]').forEach(b=>b.onclick = async()=>{
-    activeProfileId = b.dataset.pfSwitch; await saveProfiles(); renderProfileList(); applyProfileFeatures(); toast('✓ สลับโปรไฟล์แล้ว');
+    activeProfileId = b.dataset.pfSwitch; await saveProfiles();
+    await loadProfileData(); renderAll(); renderProfileList(); applyProfileFeatures();
+    toast('✓ สลับโปรไฟล์แล้ว');
   });
   document.querySelectorAll('[data-pf-edit]').forEach(b=>b.onclick = ()=>openProfileEditor(b.dataset.pfEdit));
   document.querySelectorAll('[data-pf-del]').forEach(b=>b.onclick = async()=>{
-    if(!confirm('ลบโปรไฟล์นี้?')) return;
+    if(!confirm('ลบโปรไฟล์นี้? (ข้อมูลของโปรไฟล์นี้จะไม่ถูกลบออกจากเครื่อง แต่จะเข้าถึงไม่ได้อีก)')) return;
+    const wasActive = activeProfileId===b.dataset.pfDel;
     PROFILES = PROFILES.filter(p=>p.id!==b.dataset.pfDel);
-    if(activeProfileId===b.dataset.pfDel) activeProfileId = PROFILES[0].id;
-    await saveProfiles(); renderProfileList(); applyProfileFeatures();
+    if(wasActive) activeProfileId = PROFILES[0].id;
+    await saveProfiles();
+    if(wasActive){ await loadProfileData(); renderAll(); }
+    renderProfileList(); applyProfileFeatures();
   });
 }
 let pfEditingId = null;
+let pfSelectedTheme = 'purple';
 function openProfileEditor(id){
   pfEditingId = id;
   const prof = id ? PROFILES.find(p=>p.id===id) : null;
   document.getElementById('pf-name').value = prof ? prof.name : '';
   document.getElementById('pf-icon').value = prof ? (prof.icon||'') : '';
+  pfSelectedTheme = prof ? (prof.theme||'purple') : (THEME_PRESETS.find(t=>!PROFILES.some(p=>p.theme===t.id))?.id || 'purple');
+  renderThemeSwatches();
   const enabled = new Set(prof ? prof.features : APP_FEATURES.map(f=>f.id));
   document.getElementById('pf-feature-list').innerHTML = APP_FEATURES.map(f=>`
     <label style="display:flex; align-items:center; gap:9px; font-size:13px; cursor:pointer">
@@ -3801,6 +3860,12 @@ function openProfileEditor(id){
       <span>${f.icon} ${f.label}</span>
     </label>`).join('');
   document.getElementById('profile-editor').style.display = 'flex';
+}
+function renderThemeSwatches(){
+  document.getElementById('pf-theme-list').innerHTML = THEME_PRESETS.map(t=>`
+    <button type="button" class="theme-swatch ${t.id===pfSelectedTheme?'on':''}" data-theme-pick="${t.id}"
+      title="${t.name}" style="background:linear-gradient(135deg,${t.pri},${t.pri2})">${t.id===pfSelectedTheme?'✓':''}</button>`).join('');
+  document.querySelectorAll('[data-theme-pick]').forEach(b=>b.onclick = ()=>{ pfSelectedTheme = b.dataset.themePick; renderThemeSwatches(); });
 }
 document.getElementById('profile-add').onclick = ()=>openProfileEditor(null);
 document.getElementById('pf-cancel').onclick = ()=>{ document.getElementById('profile-editor').style.display='none'; pfEditingId=null; };
@@ -3810,42 +3875,34 @@ document.getElementById('pf-save').onclick = async ()=>{
   const icon = document.getElementById('pf-icon').value.trim();
   const features = [...document.querySelectorAll('[data-pf-feat]')].filter(c=>c.checked).map(c=>c.dataset.pfFeat);
   if(!features.length){ toast('⚠️ ต้องเลือกอย่างน้อย 1 ฟังก์ชัน ไม่งั้นจะสลับไปใช้แล้วหาเมนูไม่เจอ'); return; }
+  let isNew = false, savedId;
   if(pfEditingId){
     const prof = PROFILES.find(p=>p.id===pfEditingId);
-    prof.name = name; prof.icon = icon; prof.features = features;
+    prof.name = name; prof.icon = icon; prof.features = features; prof.theme = pfSelectedTheme;
+    savedId = pfEditingId;
   } else {
     const id = 'p' + Date.now();
-    PROFILES.push({id, name, icon, features});
-    activeProfileId = id;
+    PROFILES.push({id, name, icon, features, theme: pfSelectedTheme});
+    activeProfileId = id; isNew = true; savedId = id;
   }
   await saveProfiles();
   document.getElementById('profile-editor').style.display = 'none';
   pfEditingId = null;
+  if(isNew){ await loadProfileData(); renderAll(); }
+  else if(savedId===activeProfileId){ applyTheme(pfSelectedTheme); updateProfileBadge(); }
   renderProfileList(); applyProfileFeatures();
-  toast('✓ บันทึกโปรไฟล์แล้ว — สลับไปใช้งานให้อัตโนมัติ');
+  toast(isNew ? '✓ สร้างโปรไฟล์ใหม่แล้ว — เป็นข้อมูลชุดใหม่ที่ยังว่างอยู่' : '✓ บันทึกโปรไฟล์แล้ว');
 };
 
 (async function(){
   initSelectors();
   try{
-    MONEY = await sGet('money:entries', []);
-    TAX = await sGet('tax:data', {});
-    ASSETS = await sGet('assets:data', {fx:34, list:[], debts:[], apiKey:''});
-    GOALS = await sGet('goals:data', {birthdate:'', items:[]});
-    HEALTH = await sGet('health:data', {logs:[], checkups:[]});
-    CAT_RULES = await sGet('money:catrules', {});
     PROFILES = await sGet('app:profiles', []);
     activeProfileId = await sGet('app:activeProfile', 'default');
     ensureDefaultProfile();
     DELETED_SEED_IDS = new Set(await sGet('app:deletedSeedIds', []));
     DELETED_SEED_NAMES = new Set(await sGet('app:deletedSeedNames', []));
-    if(!ASSETS.fx) ASSETS.fx = 34;
-    if(!ASSETS.debts) ASSETS.debts = [];
-    if(ASSETS.apiKey === undefined) ASSETS.apiKey = '';
-    if(!GOALS.items) GOALS.items = [];
-    if(GOALS.birthdate===undefined) GOALS.birthdate = '';
-    if(!HEALTH.logs) HEALTH.logs = [];
-    if(!HEALTH.checkups) HEALTH.checkups = [];
+    await loadProfileData();
     setSync(true);
   }catch(e){ setSync(false); }
   await mergePending();
