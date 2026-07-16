@@ -963,9 +963,9 @@
       <div style="display:flex; gap:9px; flex-wrap:wrap">
         <button class="btn ghost" id="s-export">ดาวน์โหลด Backup (JSON)</button>
         <button class="btn ghost" onclick="document.getElementById('s-import-file').click()">นำเข้าจากไฟล์ Backup</button>
-        <input type="file" id="s-import-file" accept=".json" style="display:none">
+        <input type="file" id="s-import-file" accept=".json,application/json,text/plain,*/*" style="display:none">
       </div>
-      <div class="hint">Backup รวมข้อมูลการเงิน + สุขภาพทั้งหมด (ไม่รวมไฟล์แนบผลตรวจ) — import จากไฟล์ backup ของเวอร์ชันเก่าได้เลย</div>
+      <div class="hint">Backup รวมข้อมูลการเงิน + สุขภาพ + รายชื่อโปรไฟล์และธีมสีทั้งหมด (ไม่รวมไฟล์แนบผลตรวจ) — import จากไฟล์ backup ของเวอร์ชันเก่าได้เลย · <b>หมายเหตุ:</b> ถ้ามีหลายโปรไฟล์ที่มีข้อมูลจริงแยกกัน backup จะพกข้อมูลของโปรไฟล์ที่ "กำลังใช้งานอยู่ตอน export" ไปด้วยเท่านั้น โปรไฟล์อื่นต้องสลับไปที่โปรไฟล์นั้นแล้ว export/import แยกอีกรอบ</div>
     </div>
 
     <div class="card">
@@ -3344,7 +3344,8 @@ document.getElementById('h-goal-teaser').addEventListener('click', ()=>show('goa
 
 /* ════════ SETTINGS ════════ */
 document.getElementById('s-export').onclick = ()=>{
-  const blob = new Blob([JSON.stringify({money:MONEY, tax:TAX, assets:ASSETS, goals:GOALS, health:HEALTH, exported:new Date().toISOString()},null,2)],{type:'application/json'});
+  const blob = new Blob([JSON.stringify({money:MONEY, tax:TAX, assets:ASSETS, goals:GOALS, health:HEALTH,
+    profiles:PROFILES, activeProfileId, catRules:CAT_RULES, exported:new Date().toISOString()},null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'milk-hub-backup-' + new Date().toISOString().slice(0,10) + '.json';
@@ -3354,13 +3355,26 @@ document.getElementById('s-import-file').onchange = async e=>{
   const f = e.target.files[0]; if(!f) return;
   try{
     const data = JSON.parse(await f.text());
+    let profileMsg = '';
+    if(data.profiles && data.profiles.length){
+      PROFILES = data.profiles;
+      if(data.activeProfileId && PROFILES.find(p=>p.id===data.activeProfileId)) activeProfileId = data.activeProfileId;
+      ensureDefaultProfile();
+      await saveProfiles();   // ตั้งโปรไฟล์/ธีมให้ตรงก่อน แล้วค่อยเซฟข้อมูลด้านล่าง จะได้ลงคีย์ที่ผูกกับโปรไฟล์ถูกต้อง
+      if(data.catRules){ CAT_RULES = data.catRules; await saveCatRules(); }
+      const prof = PROFILES.find(p=>p.id===activeProfileId);
+      applyTheme(prof ? prof.theme : 'purple');
+      updateProfileBadge();
+      profileMsg = ` (รวมโปรไฟล์ ${PROFILES.length} อัน + ธีมสี)`;
+    }
     if(data.money) MONEY = data.money;
     if(data.tax) TAX = data.tax;
     if(data.assets) ASSETS = data.assets;
     if(data.goals) GOALS = data.goals;
     if(data.health) HEALTH = data.health;
     await saveMoney(); await saveTax(); await saveAssets(); await saveGoals(); await saveHealth();
-    renderAll(); toast('✓ นำเข้าข้อมูลสำเร็จ');
+    renderProfileList(); applyProfileFeatures();
+    renderAll(); toast('✓ นำเข้าข้อมูลสำเร็จ'+profileMsg);
   }catch(err){ toast('⚠️ ไฟล์ไม่ถูกต้อง'); }
 };
 document.querySelectorAll('[data-wipe]').forEach(b=>b.onclick = async ()=>{
@@ -3693,7 +3707,8 @@ async function odGetToken(interactive){
   }
 }
 function odBackupPayload(){
-  return JSON.stringify({money:MONEY, tax:TAX, assets:ASSETS, goals:GOALS, health:HEALTH, exported:new Date().toISOString()});
+  return JSON.stringify({money:MONEY, tax:TAX, assets:ASSETS, goals:GOALS, health:HEALTH,
+    profiles:PROFILES, activeProfileId, catRules:CAT_RULES, exported:new Date().toISOString()});
 }
 async function odWebhookUpload(interactive){
   if(!odConfig.webhookUrl){ if(interactive) toast('ใส่ Webhook URL ก่อน (ดูวิธีตั้งค่าด้านล่าง)'); return false; }
@@ -3732,6 +3747,17 @@ async function odRestore(){
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     if(!confirm('กู้คืนจะเขียนทับข้อมูลในเครื่องนี้ด้วยข้อมูลจาก OneDrive\n(สำรองเมื่อ ' + new Date(data.exported).toLocaleString('th-TH') + ')\nยืนยัน?')) { odSetStatus('on','เชื่อมต่อแล้ว'); return; }
+    if(data.profiles && data.profiles.length){
+      PROFILES = data.profiles;
+      if(data.activeProfileId && PROFILES.find(p=>p.id===data.activeProfileId)) activeProfileId = data.activeProfileId;
+      ensureDefaultProfile();
+      await saveProfiles();
+      if(data.catRules){ CAT_RULES = data.catRules; await saveCatRules(); }
+      const prof = PROFILES.find(p=>p.id===activeProfileId);
+      applyTheme(prof ? prof.theme : 'purple');
+      updateProfileBadge();
+      renderProfileList(); applyProfileFeatures();
+    }
     if(data.money) { MONEY = data.money; await saveMoney(); }
     if(data.tax)   { TAX = data.tax; await saveTax(); }
     if(data.assets){ ASSETS = data.assets; await saveAssets(); }
@@ -3983,4 +4009,3 @@ document.getElementById('pf-save').onclick = async ()=>{
 </script>
 </body>
 </html>
-160726
