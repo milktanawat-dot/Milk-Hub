@@ -3006,7 +3006,7 @@ function renderYearScheduleRows(g, yearsLeft){
       const ov = pctBy[yy] || {};
       const hasOv = (ov.emp!=null && ov.emp!=='') || (ov.employer!=null && ov.employer!=='');
       rows += `<div class="g-yr-row g-yr-row-pvd">
-        <span class="g-yr-lbl">ปีที่ ${yy} <span style="opacity:.6">(พ.ศ.${baseYearBE+yy})</span>
+        <span class="g-yr-lbl">ปีที่ ${yy} <span style="opacity:.6">(พ.ศ.${baseYearBE+yy-1}${yy===1?" · ปีปัจจุบัน":""})</span>
           <br><span style="font-size:9.5px; opacity:.6">เงินเดือนคาด ฿${fmt(salaryYY)} → สมทบ ≈฿${fmt(contribYY)}/ด.</span></span>
         <input type="number" step="0.5" value="${(ov.emp!=null&&ov.emp!=='')?ov.emp:''}" placeholder="${g.pvdEmpPct}%" class="${hasOv?'overridden':''}" data-gyrpct="${g.id}" data-yr="${yy}" data-field="emp">
         <input type="number" step="0.5" value="${(ov.employer!=null&&ov.employer!=='')?ov.employer:''}" placeholder="${g.pvdEmployerPct}%" class="${hasOv?'overridden':''}" data-gyrpct="${g.id}" data-yr="${yy}" data-field="employer">
@@ -3032,7 +3032,7 @@ function renderYearScheduleRows(g, yearsLeft){
     const divVal = dov && dov.value!=null ? dov.value : '';
     const hasDov = dov && dov.value!=null && dov.value!=='';
     rows += `<div class="g-yr-row g-yr-row-div">
-      <span class="g-yr-lbl">ปีที่ ${yy} <span style="opacity:.6">(พ.ศ.${baseYearBE+yy})</span></span>
+      <span class="g-yr-lbl">ปีที่ ${yy} <span style="opacity:.6">(พ.ศ.${baseYearBE+yy-1}${yy===1?" · ปีปัจจุบัน":""})</span></span>
       <input type="number" step="500" value="${hasOv?ov:''}" placeholder="${fmt(defDisp)}" class="${hasOv?'overridden':''}" data-gyr="${g.id}" data-yr="${yy}">
       <span class="g-yr-unit">${unit}</span>
       <input type="number" step="${divType==='amount'?'100':'0.1'}" value="${hasDov?divVal:''}" placeholder="${divType==='amount'?'บาท':g.rate+'%'}" class="${hasDov?'overridden':''}" data-gyrdiv="${g.id}" data-yr="${yy}">
@@ -3214,17 +3214,20 @@ function renderGoals(){
   });
   // แก้เงินเดือนปัจจุบันของเป้าหมาย PVD — อัปเดตฐานคำนวณเงินสมทบ/เดือน และตารางรายปีให้โตต่อจากค่าใหม่นี้ทันที
   document.querySelectorAll('[data-pvdsalary]').forEach(inp=>{
-    inp.addEventListener('change', async ()=>{
+    const commitPvdSalary = async ()=>{
       const id = inp.dataset.pvdsalary;
       const g = GOALS.items.find(x=>x.id===id); if(!g) return;
       const v = parseFloat(inp.value);
-      if(isNaN(v) || v<0){ toast('ใส่เงินเดือนให้ถูกต้อง'); renderGoals(); return; }
+      if(isNaN(v) || v<0) return;   // ยังพิมพ์ไม่เสร็จ/ว่าง — เงียบไว้ก่อน ไม่ต้องเตือนซ้ำตอน blur
+      if(v===g.pvdSalary) return;   // ค่าเดิม ไม่ต้องคำนวณซ้ำ
       g.pvdSalary = v;
       g.monthlyContribution = v * ((g.pvdEmpPct||0)+(g.pvdEmployerPct||0)) / 100;
       await saveGoals();
       renderGoals();
       toast(`✓ อัปเดตเงินเดือนเป็น ฿${fmt(v)} — คำนวณเงินสมทบ/เดือนและตารางรายปีใหม่จากค่านี้แล้ว`);
-    });
+    };
+    inp.addEventListener('change', commitPvdSalary);
+    inp.addEventListener('blur', commitPvdSalary);
   });
   document.querySelectorAll('[data-gcurreset]').forEach(b=>b.onclick=async ()=>{
     const id = b.dataset.gcurreset;
