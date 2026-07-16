@@ -914,6 +914,7 @@
         <label><span>% สะสมพนักงาน</span><input type="number" id="g-pvd-emp" step="0.5" value="3"></label>
         <label><span>% สมทบนายจ้าง</span><input type="number" id="g-pvd-employer" step="0.5" value="3"></label>
         <label><span>คาดการณ์เงินเดือนขึ้น/ปี (%)</span><input type="number" id="g-pvd-raise" step="0.5" value="3"></label>
+        <label><span>เพดานเงินเดือนสูงสุด (฿) <span style="font-weight:400;color:var(--dim)">ไม่บังคับ</span></span><input type="number" id="g-pvd-cap" step="500" placeholder="เช่น 70000 (เว้นว่าง = ไม่จำกัด)"></label>
       </div>
       <div class="hint" id="g-pvd-hint" style="margin-top:-4px">กรอกเงินเดือนและ % แล้วกด "ใช้เป็นเงินลงทุนเพิ่ม/เดือน" — ดึงเงินเดือนตั้งต้นจากสลิปล่าสุดในแท็บภาษีให้อัตโนมัติถ้ามี</div>
       <div style="margin-bottom:9px">
@@ -2350,6 +2351,7 @@ function openPvdConvert(gid){
         <label><span>% ที่เราสมทบ (พนักงาน)</span><input type="number" id="pvdc-emp" step="0.5" value="${g.pvdEmpPct||''}" placeholder="เช่น 5"></label>
         <label><span>% ที่นายจ้างสมทบ</span><input type="number" id="pvdc-employer" step="0.5" value="${g.pvdEmployerPct||''}" placeholder="เช่น 10"></label>
         <label><span>เงินเดือนคาดว่าขึ้น (%/ปี)</span><input type="number" id="pvdc-raise" step="0.5" value="${g.pvdSalaryRaise!=null?g.pvdSalaryRaise:''}" placeholder="เช่น 3"></label>
+        <label><span>เพดานเงินเดือนสูงสุด (฿) <span style="font-weight:400;color:var(--dim)">ไม่บังคับ</span></span><input type="number" id="pvdc-cap" step="500" value="${g.pvdSalaryCap||''}" placeholder="เว้นว่าง = ไม่จำกัด"></label>
       </div>
       <div style="display:flex; gap:8px; margin-top:14px">
         <button class="btn ghost sm" id="pvdc-cancel" style="flex:1">ยกเลิก</button>
@@ -2363,9 +2365,10 @@ function openPvdConvert(gid){
     const emp = parseFloat(document.getElementById('pvdc-emp').value);
     const employer = parseFloat(document.getElementById('pvdc-employer').value);
     const raise = parseFloat(document.getElementById('pvdc-raise').value) || 0;
+    const cap = parseFloat(document.getElementById('pvdc-cap').value) || 0;
     if(!salary || isNaN(emp) || isNaN(employer)){ toast('ใส่เงินเดือนฐานและ % ทั้งสองฝั่งก่อน'); return; }
     g.pvdMode = true;
-    g.pvdSalary = salary; g.pvdEmpPct = emp; g.pvdEmployerPct = employer; g.pvdSalaryRaise = raise;
+    g.pvdSalary = salary; g.pvdEmpPct = emp; g.pvdEmployerPct = employer; g.pvdSalaryRaise = raise; g.pvdSalaryCap = cap;
     g.monthlyContribution = salary * (emp+employer) / 100;
     await saveGoals();
     document.getElementById('modal').classList.remove('on');
@@ -2636,6 +2639,7 @@ function resetGoalForm(){
   document.getElementById('g-raise').value='';
   document.getElementById('g-cap').value='';
   document.getElementById('g-pvd-raise').value=3;
+  document.getElementById('g-pvd-cap').value='';
   setFreqChip('monthly');
   syncTargetPresetChips();
   syncRetireAgeChips();
@@ -2664,10 +2668,11 @@ document.getElementById('g-save').onclick = async ()=>{
   const pvdEmpPct = pvdLinked ? (parseFloat(document.getElementById('g-pvd-emp').value)||0) : ((existing && existing.pvdEmpPct) || 0);
   const pvdEmployerPct = pvdLinked ? (parseFloat(document.getElementById('g-pvd-employer').value)||0) : ((existing && existing.pvdEmployerPct) || 0);
   const pvdSalaryRaise = pvdLinked ? (parseFloat(document.getElementById('g-pvd-raise').value)||0) : ((existing && existing.pvdSalaryRaise) || 0);
+  const pvdSalaryCap = pvdLinked ? (parseFloat(document.getElementById('g-pvd-cap').value)||0) : ((existing && existing.pvdSalaryCap) || 0);
   const rec = {
     id: editingGoalId || uid(),
     targetId, name, targetValue, retireAge, monthlyContribution, freq, rate, raise, capValue,
-    pvdMode, pvdSalary, pvdEmpPct, pvdEmployerPct, pvdSalaryRaise,
+    pvdMode, pvdSalary, pvdEmpPct, pvdEmployerPct, pvdSalaryRaise, pvdSalaryCap,
     contribByYear: (existing && existing.contribByYear) || {},
     dividendByYear: (existing && existing.dividendByYear) || {},
     pvdPctByYear: (existing && existing.pvdPctByYear) || {},
@@ -2704,6 +2709,7 @@ function editGoal(id){
     document.getElementById('g-pvd-emp').value = g.pvdEmpPct||0;
     document.getElementById('g-pvd-employer').value = g.pvdEmployerPct||0;
     document.getElementById('g-pvd-raise').value = g.pvdSalaryRaise||0;
+    document.getElementById('g-pvd-cap').value = g.pvdSalaryCap||'';
     updatePvdHint();
   }
   updatePvdSectionVisibility(); // pvdLinked เพิ่งอัปเดต ต้องเรียกซ้ำเพื่อให้บล็อก PVD โชว์/ซ่อนถูกต้อง
@@ -2735,7 +2741,8 @@ function pvdPctForYear(g, yy){
 // - เป้าหมายทั่วไป: monthlyContribution ที่โตขึ้นทุกปีตาม "เพิ่มเงินลงทุนขึ้นปีละ%"
 function defaultContribForYear(g, yy){
   if(g.pvdMode){
-    const salaryYY = (g.pvdSalary||0) * Math.pow(1+((g.pvdSalaryRaise||0)/100), yy-1);
+    let salaryYY = (g.pvdSalary||0) * Math.pow(1+((g.pvdSalaryRaise||0)/100), yy-1);
+    if(g.pvdSalaryCap>0) salaryYY = Math.min(salaryYY, g.pvdSalaryCap);
     const {emp, employer} = pvdPctForYear(g, yy);
     return salaryYY * ((emp+employer)/100);
   }
@@ -3001,13 +3008,16 @@ function renderYearScheduleRows(g, yearsLeft){
   if(g.pvdMode){
     const pctBy = g.pvdPctByYear || {};
     for(let yy=1; yy<=totalYears; yy++){
-      const salaryYY = Math.round((g.pvdSalary||0) * Math.pow(1+((g.pvdSalaryRaise||0)/100), yy-1));
+      const rawSalary = (g.pvdSalary||0) * Math.pow(1+((g.pvdSalaryRaise||0)/100), yy-1);
+      let salaryYY = Math.round(rawSalary);
+      const capped = g.pvdSalaryCap>0 && rawSalary > g.pvdSalaryCap;
+      if(capped) salaryYY = Math.round(g.pvdSalaryCap);
       const contribYY = Math.round(defaultContribForYear(g, yy));
       const ov = pctBy[yy] || {};
       const hasOv = (ov.emp!=null && ov.emp!=='') || (ov.employer!=null && ov.employer!=='');
       rows += `<div class="g-yr-row g-yr-row-pvd">
         <span class="g-yr-lbl">ปีที่ ${yy} <span style="opacity:.6">(พ.ศ.${baseYearBE+yy-1}${yy===1?" · ปีปัจจุบัน":""})</span>
-          <br><span style="font-size:9.5px; opacity:.6">เงินเดือนคาด ฿${fmt(salaryYY)} → สมทบ ≈฿${fmt(contribYY)}/ด.</span></span>
+          <br><span style="font-size:9.5px; opacity:.6">เงินเดือนคาด ฿${fmt(salaryYY)}${capped?' 🔒 ถึงเพดาน':''} → สมทบ ≈฿${fmt(contribYY)}/ด.</span></span>
         <input type="number" step="0.5" value="${(ov.emp!=null&&ov.emp!=='')?ov.emp:''}" placeholder="${g.pvdEmpPct}%" class="${hasOv?'overridden':''}" data-gyrpct="${g.id}" data-yr="${yy}" data-field="emp">
         <input type="number" step="0.5" value="${(ov.employer!=null&&ov.employer!=='')?ov.employer:''}" placeholder="${g.pvdEmployerPct}%" class="${hasOv?'overridden':''}" data-gyrpct="${g.id}" data-yr="${yy}" data-field="employer">
       </div>`;
@@ -3105,7 +3115,7 @@ function renderGoalCardHtml(g, i){
       <span class="num">${aggregated ? `${breakdown.length} รายการ` : (g.freq==='yearly'?fmt((g.monthlyContribution||0)*12):fmt(g.monthlyContribution||0))}${g.pvdMode?` <span style="color:var(--dim);font-weight:500">(${g.pvdEmpPct}%+${g.pvdEmployerPct}% · เงินเดือน+${g.pvdSalaryRaise}%/ปี)</span>`:(!aggregated&&g.raise)?` <span style="color:var(--dim);font-weight:500">(+${g.raise}%/ปี)</span>`:''}</span>
     </div>
     ${g.pvdMode ? `<div class="calc-row">
-      <span>เงินเดือนปัจจุบัน <span style="font-size:9.5px; color:var(--faint)">(ฐานคำนวณตารางรายปีด้านล่าง)</span></span>
+      <span>เงินเดือนปัจจุบัน <span style="font-size:9.5px; color:var(--faint)">(ฐานคำนวณตารางรายปีด้านล่าง${g.pvdSalaryCap>0?' · เพดาน ฿'+fmt(g.pvdSalaryCap):''})</span></span>
       <span style="display:flex; align-items:center; gap:5px">฿<input type="number" class="g-cur-input num" data-pvdsalary="${g.id}" value="${g.pvdSalary||0}" step="500" style="width:100px; text-align:right"></span>
     </div>` : ''}
     <div class="calc-row" style="${(g.capValue&&!aggregated)?'':'border-bottom:none'}">
