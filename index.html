@@ -2366,6 +2366,7 @@ function openPvdConvert(gid){
     if(!salary || isNaN(emp) || isNaN(employer)){ toast('ใส่เงินเดือนฐานและ % ทั้งสองฝั่งก่อน'); return; }
     g.pvdMode = true;
     g.pvdSalary = salary; g.pvdEmpPct = emp; g.pvdEmployerPct = employer; g.pvdSalaryRaise = raise;
+    g.monthlyContribution = salary * (emp+employer) / 100;
     await saveGoals();
     document.getElementById('modal').classList.remove('on');
     renderGoals();
@@ -3103,6 +3104,10 @@ function renderGoalCardHtml(g, i){
       <span>${aggregated ? 'รวมจากเป้าหมายย่อย' : (g.freq==='yearly'?'สมทบเพิ่ม/ปี':'ลงทุนเพิ่ม/เดือน')}${g.pvdMode?' <span class="tag">ผูกเงินเดือน</span>':''}${aggregated?' <span class="tag">อัตโนมัติ</span>':''}</span>
       <span class="num">${aggregated ? `${breakdown.length} รายการ` : (g.freq==='yearly'?fmt((g.monthlyContribution||0)*12):fmt(g.monthlyContribution||0))}${g.pvdMode?` <span style="color:var(--dim);font-weight:500">(${g.pvdEmpPct}%+${g.pvdEmployerPct}% · เงินเดือน+${g.pvdSalaryRaise}%/ปี)</span>`:(!aggregated&&g.raise)?` <span style="color:var(--dim);font-weight:500">(+${g.raise}%/ปี)</span>`:''}</span>
     </div>
+    ${g.pvdMode ? `<div class="calc-row">
+      <span>เงินเดือนปัจจุบัน <span style="font-size:9.5px; color:var(--faint)">(ฐานคำนวณตารางรายปีด้านล่าง)</span></span>
+      <span style="display:flex; align-items:center; gap:5px">฿<input type="number" class="g-cur-input num" data-pvdsalary="${g.id}" value="${g.pvdSalary||0}" step="500" style="width:100px; text-align:right"></span>
+    </div>` : ''}
     <div class="calc-row" style="${(g.capValue&&!aggregated)?'':'border-bottom:none'}">
       <span>คาดการณ์มูลค่าตอนเกษียณ (อายุ ${g.retireAge})</span>
       <span class="num" style="display:inline-flex; align-items:center; gap:7px">${fmt(finalVal)} ${hitPill}</span>
@@ -3205,6 +3210,20 @@ function renderGoals(){
       await saveGoals();
       renderGoals();
       toast(g.valueOverride ? '✓ อัปเดตมูลค่าปัจจุบันแล้ว — คำนวณต่อจากตัวเลขนี้' : '✓ ใช้มูลค่าจากพอร์ตตามปกติ');
+    });
+  });
+  // แก้เงินเดือนปัจจุบันของเป้าหมาย PVD — อัปเดตฐานคำนวณเงินสมทบ/เดือน และตารางรายปีให้โตต่อจากค่าใหม่นี้ทันที
+  document.querySelectorAll('[data-pvdsalary]').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      const id = inp.dataset.pvdsalary;
+      const g = GOALS.items.find(x=>x.id===id); if(!g) return;
+      const v = parseFloat(inp.value);
+      if(isNaN(v) || v<0){ toast('ใส่เงินเดือนให้ถูกต้อง'); renderGoals(); return; }
+      g.pvdSalary = v;
+      g.monthlyContribution = v * ((g.pvdEmpPct||0)+(g.pvdEmployerPct||0)) / 100;
+      await saveGoals();
+      renderGoals();
+      toast(`✓ อัปเดตเงินเดือนเป็น ฿${fmt(v)} — คำนวณเงินสมทบ/เดือนและตารางรายปีใหม่จากค่านี้แล้ว`);
     });
   });
   document.querySelectorAll('[data-gcurreset]').forEach(b=>b.onclick=async ()=>{
