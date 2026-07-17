@@ -436,11 +436,11 @@
       </div>
       <div style="display:flex; gap:9px; align-items:center; flex-wrap:wrap">
         <button class="btn" id="m-add">บันทึก</button>
-        <button class="btn ghost sm" onclick="document.getElementById('m-ocr-file').click()">📎 แนบรูปใบเสร็จให้ระบบอ่าน (OCR)</button>
-        <input type="file" id="m-ocr-file" accept="image/*" style="display:none">
+        <button class="btn ghost sm" onclick="document.getElementById('m-ocr-file').click()">📎 แนบไฟล์ให้ระบบอ่าน (รูป/PDF/Excel)</button>
+        <input type="file" id="m-ocr-file" accept="image/*,.pdf,.xlsx,.xls,.csv" style="display:none">
         <span id="m-ocr-status" style="font-size:11.5px;color:var(--dim)"></span>
       </div>
-      <div class="hint">OCR อ่านตัวเลข/วันที่จากรูปแล้วเติมในฟอร์มด้านบนให้อัตโนมัติ — เช็คความถูกต้องก่อนกด "บันทึก" เสมอ (ความแม่นยำขึ้นกับความคมชัดของรูป) · รองรับเฉพาะไฟล์รูปภาพ</div>
+      <div class="hint">แนบรูปใบเสร็จ/สลิป → อ่านแล้วเติมฟอร์มด้านบนให้ตรงๆ · แนบไฟล์ PDF สเตทเมนต์หรือ Excel/CSV ที่มีหลายรายการ → เปิดหน้าต่างแชทมาให้เช็คทีละรายการก่อนบันทึกอัตโนมัติ — เช็คความถูกต้องก่อนกด "บันทึก" เสมอ</div>
     </div>
 
     <div class="m-mode-tabs">
@@ -1128,7 +1128,7 @@
     </div>
     <div class="chat-input">
       <button class="cbtn attach" id="chat-attach" title="แนบรูป/ไฟล์">📎</button>
-      <input type="file" id="chat-file" accept="image/*,.pdf" style="display:none">
+      <input type="file" id="chat-file" accept="image/*,.pdf,.xlsx,.xls,.csv" style="display:none">
       <textarea id="chat-text" rows="1" placeholder="เช่น กาแฟ 40 · เมื่อวาน ข้าว 60 · เงินเดือน 30000"></textarea>
       <button class="cbtn send" id="chat-send" title="ส่ง">➤</button>
     </div>
@@ -2231,6 +2231,36 @@ async function ocrInputDataUrl(file, maxDim){
   return await fileToDataUrl(file, maxDim);
 }
 
+/* ── อ่านไฟล์ Excel/CSV (SheetJS โหลดตอนใช้จริง) — แปลงเป็นบรรทัดข้อความแล้วใช้ตัวแยกรายการเดียวกับแชท ── */
+let sheetJsReadyPromise = null;
+function ensureSheetJs(){
+  if(!sheetJsReadyPromise){
+    sheetJsReadyPromise = new Promise((resolve,reject)=>{
+      if(window.XLSX) return resolve(window.XLSX);
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = ()=>resolve(window.XLSX);
+      s.onerror = ()=>reject(new Error('โหลดตัวอ่าน Excel ไม่สำเร็จ'));
+      document.head.appendChild(s);
+    });
+  }
+  return sheetJsReadyPromise;
+}
+function isSpreadsheetFile(f){
+  return /\.(xlsx|xls|csv)$/i.test(f.name||'') ||
+    ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel','text/csv'].includes(f.type);
+}
+async function spreadsheetToLines(f){
+  const XLSX = await ensureSheetJs();
+  const buf = await f.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:''});
+  return rows
+    .map(row => row.map(c=>String(c||'').trim()).filter(Boolean).join(' '))
+    .filter(line => line.length>0);
+}
+
 /* ════════ OCR (Tesseract.js — อ่านตัวเลขจากรูปแบบประมวลผลในเครื่อง) ════════ */
 let ocrWorkerPromise = null;
 function getOcrWorker(){
@@ -2299,9 +2329,33 @@ async function runOcr(file, statusElId, maxDim){
   }
 }
 document.getElementById('m-ocr-file').onchange = async e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const text = await runOcr(f, 'm-ocr-status'); if(!text) return;
+  const f = e.target.files[0]; if(!f) return; e.target.value='';
+
+  // ไฟล์ Excel/CSV มักมีหลายรายการเสมอ — เปิดแชทมาช่วยตรวจทีละรายการก่อนบันทึกให้อัตโนมัติ
+  if(isSpreadsheetFile(f)){
+    chatOpen();
+    await processReceiptFile(f);
+    return;
+  }
+
+  const isPdf = f.type==='application/pdf';
+  const status = document.getElementById('m-ocr-status');
+  if(status) status.textContent = isPdf ? 'กำลังแปลง PDF และอ่านข้อมูล…' : 'กำลังอ่านข้อมูล…';
+  const text = await runOcr(f, 'm-ocr-status', isPdf ? 2200 : 1800); if(!text) return;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+
+  // PDF ที่มีหลายรายการ (เช่นสเตทเมนต์) — ส่งต่อให้แชทช่วยแยกทีละรายการแทนการเติมฟอร์มเดียว
+  if(isPdf){
+    const candidates = lines.map(l=>chatParseLine(l)).filter(p=>p.amount!==null && p.amount>0 && p.item);
+    if(candidates.length>=2){
+      chatOpen();
+      chatMe(`📎 ${esc(f.name)}`);
+      chatBot(`✓ เจอ ${candidates.length} รายการในไฟล์ — เช็คแต่ละรายการแล้วกดบันทึกทีละอันได้เลย`);
+      candidates.forEach(p=>chatPreview(p));
+      return;
+    }
+  }
+
   const amt = findNearNumber(lines, ['รวม','total','จำนวนเงิน','ยอดรวม','net']) ??
               (lines.map(ocrNum).filter(n=>n!==null).sort((a,b)=>b-a)[0] ?? null);
   const date = findDate(text);
@@ -3774,6 +3828,18 @@ async function processReceiptFile(f){
   if(f.type==='application/json' || f.name.endsWith('.json')){
     chatMe(`📎 ${esc(f.name)}`);
     chatBot('ไฟล์ backup JSON ให้ไปที่ ⚙️ ตั้งค่า → นำเข้าจากไฟล์ Backup นะ');
+    return;
+  }
+  if(isSpreadsheetFile(f)){
+    chatMe(`📎 ${esc(f.name)}`);
+    const status = chatBot('📊 กำลังอ่านไฟล์ Excel/CSV… <span id="chat-ocr-st"></span>');
+    let lines;
+    try{ lines = await spreadsheetToLines(f); }
+    catch(e){ console.error(e); status.innerHTML = '⚠️ อ่านไฟล์นี้ไม่สำเร็จ (ต้องต่อเน็ตตอนโหลดตัวอ่านครั้งแรก) ลองใหม่หรือพิมพ์เองได้เลย'; return; }
+    const candidates = lines.map(l=>chatParseLine(l)).filter(p=>p.amount!==null && p.amount>0 && p.item);
+    if(!candidates.length){ status.innerHTML = '⚠️ ไม่เจอรายการที่มีทั้งชื่อรายการและจำนวนเงินในไฟล์นี้ ลองไฟล์อื่นหรือพิมพ์เองได้เลย'; return; }
+    status.innerHTML = `✓ เจอ ${candidates.length} รายการในไฟล์ — เช็คแต่ละรายการแล้วกดบันทึกทีละอันได้เลย`;
+    candidates.forEach(p=>chatPreview(p));
     return;
   }
   const isPdf = f.type==='application/pdf';
