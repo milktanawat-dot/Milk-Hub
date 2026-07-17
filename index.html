@@ -775,7 +775,23 @@
         <input type="file" id="he-ocr-file" accept="image/*" style="display:none">
         <span id="he-ocr-status" style="font-size:11.5px;color:var(--dim)"></span>
       </div>
-      <div class="hint">💡 RHR ที่สูงกว่าค่าเฉลี่ยผิดปกติหลายวันติด = สัญญาณพักฟื้นไม่พอ/เริ่มป่วย ควรลดโหลดซ้อมก่อน PYT100<br>📸 แคปหน้าจอเครื่องชั่ง/แอปนอน/แอปนาฬิกา แล้วกด "แนบรูปให้ระบบอ่าน" ระบบจะอ่านตัวเลขใส่ให้อัตโนมัติ (เช็คความถูกต้องก่อนกดบันทึกเสมอ)</div>
+      <div class="hint">💡 RHR ที่สูงกว่าค่าเฉลี่ยผิดปกติหลายวันติด = สัญญาณพักฟื้นไม่พอ/เริ่มป่วย ควรลดโหลดซ้อมก่อน PYT100<br>📸 แคปหน้าจอเครื่องชั่ง/แอปนอน/แอปนาฬิกา แล้วกด "แนบรูปให้ระบบอ่าน" ระบบจะอ่านตัวเลขใส่ให้อัตโนมัติ (เช็คความถูกต้องก่อนกดบันทึกเสมอ) — แคปแบบสรุปรายสัปดาห์ (มีชื่อวัน จ/อ/พ/... หรือ Mon/Tue/...) ก็ได้ ระบบจะแยกให้ทีละวัน</div>
+      <div id="he-weekly-preview" style="display:none; margin-top:11px; background:var(--card2); border-radius:14px; padding:12px">
+        <div style="font-size:12.5px; font-weight:800; margin-bottom:8px">📅 เจอข้อมูลหลายวันในรูปนี้ — เลือกว่าเป็นค่าอะไร แล้วบันทึกทีเดียวได้เลย</div>
+        <label style="display:block; margin-bottom:8px"><span style="font-size:11px; color:var(--dim)">ตัวเลขที่เจอคือ</span>
+          <select id="he-weekly-metric" style="width:100%; margin-top:3px">
+            <option value="weight">น้ำหนัก (กก.)</option>
+            <option value="fat">ไขมัน (%)</option>
+            <option value="rhr">RHR (ครั้ง/นาที)</option>
+            <option value="sleep">ชั่วโมงนอน</option>
+          </select>
+        </label>
+        <div id="he-weekly-rows" style="display:flex; flex-direction:column; gap:5px; margin-bottom:9px; font-size:12.5px"></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn ghost sm" id="he-weekly-cancel" style="flex:1">ยกเลิก</button>
+          <button class="btn sm" id="he-weekly-save" style="flex:1">บันทึกทั้งหมด</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -1098,7 +1114,7 @@
       <div class="logo" style="width:34px;height:34px;font-size:15px;border-radius:11px">M</div>
       <div>
         <div class="ttl">บันทึกด่วน</div>
-        <div class="sub">พิมพ์รายการ หรือแนบสลิป/ใบเสร็จ เดี๋ยวจัดหมวดให้</div>
+        <div class="sub">พิมพ์รายการ หรือแนบสลิป/ใบเสร็จ/ไฟล์ PDF สเตทเมนต์ เดี๋ยวจัดหมวดให้</div>
       </div>
       <button class="chat-close" id="chat-close">✕</button>
     </div>
@@ -2179,6 +2195,41 @@ async function fileToDataUrl(file, maxDim){
     reader.onerror=reject; reader.readAsDataURL(file);
   });
 }
+/* ── แปลง PDF หน้าแรกเป็นรูปภาพ ก่อนส่งให้ OCR อ่าน (Tesseract อ่าน PDF ตรงๆ ไม่ได้) ── */
+let pdfjsReadyPromise = null;
+function ensurePdfJs(){
+  if(!pdfjsReadyPromise){
+    pdfjsReadyPromise = new Promise((resolve,reject)=>{
+      if(window.pdfjsLib) return resolve(window.pdfjsLib);
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js';
+      s.onload = ()=>{
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = ()=>reject(new Error('โหลด PDF reader ไม่สำเร็จ'));
+      document.head.appendChild(s);
+    });
+  }
+  return pdfjsReadyPromise;
+}
+async function pdfFirstPageToImage(file, maxDim){
+  const pdfjsLib = await ensurePdfJs();
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const page = await pdf.getPage(1);
+  const v0 = page.getViewport({scale:1});
+  const scale = Math.max(maxDim / Math.max(v0.width, v0.height), 0.5);
+  const viewport = page.getViewport({scale});
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+  return canvas.toDataURL('image/jpeg', 0.88);
+}
+async function ocrInputDataUrl(file, maxDim){
+  if(file.type === 'application/pdf') return await pdfFirstPageToImage(file, maxDim);
+  return await fileToDataUrl(file, maxDim);
+}
 
 /* ════════ OCR (Tesseract.js — อ่านตัวเลขจากรูปแบบประมวลผลในเครื่อง) ════════ */
 let ocrWorkerPromise = null;
@@ -2225,17 +2276,17 @@ function findDate(text){
   }
   return null;
 }
-async function runOcr(file, statusElId){
+async function runOcr(file, statusElId, maxDim){
   const statusEl = document.getElementById(statusElId);
   if(typeof Tesseract === 'undefined'){
     if(statusEl) statusEl.textContent = '⚠️ โหลดตัวอ่าน OCR ไม่สำเร็จ (ต้องต่อเน็ตครั้งแรก)';
     toast('⚠️ โหลด OCR ไม่สำเร็จ — ต้องมีอินเทอร์เน็ตตอนโหลดครั้งแรก');
     return null;
   }
-  if(statusEl) statusEl.textContent = 'กำลังเตรียมตัวอ่าน…';
+  if(statusEl) statusEl.textContent = file.type==='application/pdf' ? 'กำลังแปลง PDF เป็นรูป…' : 'กำลังเตรียมตัวอ่าน…';
   try{
     const worker = await getOcrWorker();
-    const dataUrl = await fileToDataUrl(file, 1800);
+    const dataUrl = await ocrInputDataUrl(file, maxDim||1800);
     if(statusEl) statusEl.textContent = 'กำลังอ่านตัวอักษร…';
     const { data } = await worker.recognize(dataUrl);
     if(statusEl) statusEl.textContent = '✓ อ่านเสร็จแล้ว';
@@ -2243,7 +2294,7 @@ async function runOcr(file, statusElId){
   }catch(e){
     console.error(e);
     if(statusEl) statusEl.textContent = '⚠️ อ่านไม่สำเร็จ';
-    toast('⚠️ OCR อ่านรูปนี้ไม่สำเร็จ ลองรูปที่คมชัดกว่านี้');
+    toast(file.type==='application/pdf' ? '⚠️ อ่านไฟล์ PDF นี้ไม่สำเร็จ ลองไฟล์อื่นหรือแคปหน้าจอเป็นรูปแทน' : '⚠️ OCR อ่านรูปนี้ไม่สำเร็จ ลองรูปที่คมชัดกว่านี้');
     return null;
   }
 }
@@ -2276,10 +2327,56 @@ document.getElementById('t-ocr-file').onchange = async e=>{
 };
 
 /* ── OCR: บันทึกค่าสุขภาพประจำวัน (แคปหน้าจอเครื่องชั่ง/แอปนอน/นาฬิกา) ── */
+/* ── ตรวจจับค่าหลายวันจากภาพสรุปรายสัปดาห์ (มีป้ายชื่อวัน จ/อ/พ/พฤ/ศ/ส/อา หรือ Mon-Sun) ── */
+const DAY_IDX_TH = {'จ':0,'อ':1,'พ':2,'พฤ':3,'ศ':4,'ส':5,'อา':6};
+const DAY_IDX_EN = {mon:0,tue:1,wed:2,thu:3,fri:4,sat:5,sun:6};
+function dayIdxOfLine(line){
+  const firstTok = line.trim().split(/\s+/)[0] || '';
+  const enMatch = firstTok.match(/^(mon|tue|wed|thu|fri|sat|sun)/i);
+  if(enMatch) return DAY_IDX_EN[enMatch[1].toLowerCase()];
+  if(DAY_IDX_TH[firstTok]!==undefined) return DAY_IDX_TH[firstTok];
+  return null;
+}
+function parseWeeklyPairs(text){
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const monday = mondayOf(new Date().toISOString().slice(0,10));
+  const seen = {};
+  for(const line of lines){
+    const dayIdx = dayIdxOfLine(line);
+    if(dayIdx===null || dayIdx===undefined) continue;
+    const rest = line.trim().split(/\s+/).slice(1).join(' ');
+    const num = ocrNum(rest);
+    if(num===null) continue;
+    seen[shiftDate(monday, dayIdx)] = num;   // ถ้าเจอวันซ้ำ เอาค่าล่าสุดในภาพ (บรรทัดหลังทับบรรทัดก่อน)
+  }
+  return Object.entries(seen).map(([date,value])=>({date,value})).sort((a,b)=>a.date.localeCompare(b.date));
+}
+let heWeeklyPairs = [];
+function renderHeWeeklyPreview(){
+  document.getElementById('he-weekly-rows').innerHTML = heWeeklyPairs.map((p,i)=>`
+    <div style="display:flex; align-items:center; gap:8px">
+      <span style="flex:1">${fmtDayShort(p.date)}</span>
+      <input type="number" step="0.1" value="${p.value}" data-heweekval="${i}" style="width:80px; text-align:right">
+    </div>`).join('');
+  document.querySelectorAll('[data-heweekval]').forEach(inp=>{
+    inp.onchange = ()=>{ heWeeklyPairs[parseInt(inp.dataset.heweekval)].value = parseFloat(inp.value)||0; };
+  });
+}
 document.getElementById('he-ocr-file').onchange = async e=>{
   const f = e.target.files[0]; if(!f) return; e.target.value='';
-  const text = await runOcr(f, 'he-ocr-status'); if(!text) return;
+  document.getElementById('he-weekly-preview').style.display = 'none';
+  const text = await runOcr(f, 'he-ocr-status', 2200); if(!text) return;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+
+  const weeklyPairs = parseWeeklyPairs(text);
+  if(weeklyPairs.length>=3){
+    heWeeklyPairs = weeklyPairs;
+    renderHeWeeklyPreview();
+    document.getElementById('he-weekly-preview').style.display = 'block';
+    toast(`✓ เจอข้อมูล ${weeklyPairs.length} วัน — เลือกว่าเป็นค่าอะไรแล้วกดบันทึกทั้งหมดได้เลย`);
+    return;
+  }
+
   const weight = findNearNumber(lines, ['น้ำหนัก','weight','body weight']);
   const fat = findNearNumber(lines, ['ไขมัน','body fat','fat%','fat %','bodyfat']);
   const rhr = findNearNumber(lines, ['rhr','resting heart rate','อัตราการเต้นหัวใจขณะพัก','ชีพจรขณะพัก','heart rate']);
@@ -2292,7 +2389,24 @@ document.getElementById('he-ocr-file').onchange = async e=>{
   if(rhr!==null){ document.getElementById('he-rhr').value = rhr; filled.push('RHR '+rhr); }
   if(sleep!==null){ document.getElementById('he-sleep').value = sleep; filled.push('นอน '+sleep+'ชม.'); }
   if(date) document.getElementById('he-date').value = date;
-  toast(filled.length ? `✓ อ่านได้: ${filled.join(' · ')} — เช็คให้ตรงก่อนกดบันทึก` : '⚠️ อ่านตัวเลขไม่ได้ ลองกรอกเองหรือถ่ายรูปให้ชัดกว่านี้');
+  toast(filled.length ? `✓ อ่านได้: ${filled.join(' · ')} — เช็คให้ตรงก่อนกดบันทึก` : '⚠️ อ่านตัวเลขไม่ได้ ลองกรอกเองหรือถ่ายรูปให้ชัดกว่านี้ (ถ้าเป็นภาพสรุปรายสัปดาห์ ต้องมีป้ายชื่อวันชัดเจน เช่น จ อ พ หรือ Mon Tue Wed)');
+};
+document.getElementById('he-weekly-cancel').onclick = ()=>{ document.getElementById('he-weekly-preview').style.display='none'; heWeeklyPairs=[]; };
+document.getElementById('he-weekly-save').onclick = async ()=>{
+  const metric = document.getElementById('he-weekly-metric').value;
+  const fieldMap = {weight:'weight', fat:'fat', rhr:'rhr', sleep:'sleep'};
+  let count = 0;
+  heWeeklyPairs.forEach(p=>{
+    let rec = HEALTH.logs.find(x=>x.date===p.date);
+    if(!rec){ rec = {id:uid(), date:p.date}; HEALTH.logs.push(rec); }
+    rec[fieldMap[metric]] = p.value;
+    count++;
+  });
+  await saveHealth();
+  document.getElementById('he-weekly-preview').style.display = 'none';
+  heWeeklyPairs = [];
+  renderHealth();
+  toast(`✓ บันทึก ${count} วันแล้ว`);
 };
 
 /* ── OCR: ผลตรวจสุขภาพประจำปี (แคป/ถ่ายรูปใบผลตรวจ) ── */
@@ -3576,7 +3690,7 @@ function chatParseLine(line){
 
 const chatSheet = document.getElementById('chat-sheet');
 const chatBody = document.getElementById('chat-body');
-function chatOpen(){ chatSheet.classList.add('open'); document.getElementById('chat-text').focus(); if(!chatBody.children.length) chatBot('สวัสดี Milk 👋 พิมพ์รายการได้เลย เช่น <b>"กาแฟ 40"</b> หรือ <b>"เมื่อวาน มื้อเย็น 150"</b> — พิมพ์หลายรายการแยกบรรทัดก็ได้ หรือกด 📎 แนบสลิป/ใบเสร็จ'); }
+function chatOpen(){ chatSheet.classList.add('open'); document.getElementById('chat-text').focus(); if(!chatBody.children.length) chatBot('สวัสดี Milk 👋 พิมพ์รายการได้เลย เช่น <b>"กาแฟ 40"</b> หรือ <b>"เมื่อวาน มื้อเย็น 150"</b> — พิมพ์หลายรายการแยกบรรทัดก็ได้ หรือกด 📎 แนบสลิป/ใบเสร็จ/ไฟล์ PDF (เช่น e-statement ที่ดาวน์โหลดมาจากธนาคาร) ได้เลย — ถ้าไฟล์มีหลายรายการ ระบบจะแยกให้ทีละรายการ'); }
 function chatCloseFn(){ chatSheet.classList.remove('open'); }
 document.getElementById('chat-fab').onclick = chatOpen;
 document.getElementById('chat-close').onclick = chatCloseFn;
@@ -3662,13 +3776,26 @@ async function processReceiptFile(f){
     chatBot('ไฟล์ backup JSON ให้ไปที่ ⚙️ ตั้งค่า → นำเข้าจากไฟล์ Backup นะ');
     return;
   }
+  const isPdf = f.type==='application/pdf';
   if(f.type.startsWith('image/')){
     const url = URL.createObjectURL(f);
     chatMe(`<img class="catt" src="${url}">📎 ${esc(f.name||'รูปที่แชร์มา')}`);
   } else chatMe(`📎 ${esc(f.name)}`);
-  const status = chatBot('🔍 กำลังอ่านข้อมูลจากไฟล์… <span id="chat-ocr-st"></span>');
-  const text = await runOcr(f, 'chat-ocr-st');
+  const status = chatBot(isPdf ? '🔍 กำลังแปลง PDF และอ่านข้อมูล… <span id="chat-ocr-st"></span>' : '🔍 กำลังอ่านข้อมูลจากไฟล์… <span id="chat-ocr-st"></span>');
+  const text = await runOcr(f, 'chat-ocr-st', isPdf ? 2200 : 1800);
   if(!text){ status.innerHTML='⚠️ อ่านไฟล์นี้ไม่สำเร็จ ลองรูปที่ชัดกว่านี้ หรือพิมพ์เองได้เลย'; return; }
+
+  // ไฟล์ PDF มักเป็นสเตทเมนต์/e-slip ที่มีหลายรายการ — ลองแยกทีละบรรทัดก่อน เหมือนพิมพ์หลายบรรทัดในแชท
+  if(isPdf){
+    const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+    const candidates = lines.map(l=>chatParseLine(l)).filter(p=>p.amount!==null && p.amount>0 && p.item);
+    if(candidates.length>=2){
+      status.innerHTML = `✓ เจอ ${candidates.length} รายการในไฟล์ — เช็คแต่ละรายการแล้วกดบันทึกทีละอันได้เลย`;
+      candidates.forEach(p=>chatPreview(p));
+      return;
+    }
+  }
+
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
   const amt = findNearNumber(lines, ['รวม','total','จำนวนเงิน','ยอดรวม','net','amount']) ??
               (lines.map(ocrNum).filter(n=>n!==null && n>0).sort((a,b)=>b-a)[0] ?? null);
