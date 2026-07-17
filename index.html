@@ -30,7 +30,7 @@
     font-family:'Noto Sans Thai','Leelawadee UI','Segoe UI',-apple-system,Tahoma,sans-serif;
     font-size:15px; -webkit-font-smoothing:antialiased;}
   .num{font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
-  .wrap{max-width:680px; margin:0 auto; padding:16px 14px calc(86px + env(safe-area-inset-bottom));}
+  .wrap{max-width:680px; margin:0 auto; padding:16px 14px calc(28px + env(safe-area-inset-bottom));}
 
   /* ── Header ── */
   header{display:flex; align-items:center; gap:11px; margin-bottom:14px; padding:2px 4px;}
@@ -63,6 +63,7 @@
   .hero .hl{font-size:12px; opacity:.85;}
   .hero .hv{font-size:33px; font-weight:800; margin:3px 0 13px; letter-spacing:-.02em;}
   .hero-chips{display:flex; gap:9px; position:relative; z-index:1;}
+  .h-spark-svg{width:100%; height:40px; display:block; margin-top:12px; position:relative; z-index:1;}
   .hchip{flex:1; background:rgba(255,255,255,.16); backdrop-filter:blur(4px); border-radius:13px; padding:9px 12px;}
   .hchip .cl{font-size:10.5px; opacity:.85;}
   .hchip .cv{font-size:15.5px; font-weight:700; margin-top:2px;}
@@ -192,17 +193,44 @@
   @media(prefers-reduced-motion:reduce){.view.on{animation:none;} .tile,.btn{transition:none;}}
 
   /* ── Bottom nav ── */
-  .bnav{position:fixed; bottom:0; left:0; right:0; z-index:50;
-    background:rgba(255,255,255,.92); backdrop-filter:blur(14px);
-    border-top:1px solid var(--line); padding:7px 4px calc(7px + env(safe-area-inset-bottom));
-    display:flex; justify-content:space-around; max-width:680px; margin:0 auto; border-radius:20px 20px 0 0;
-    box-shadow:0 -6px 24px rgba(96,84,200,.10);}
-  .bnav button{background:none; border:none; cursor:pointer; font-family:inherit; color:var(--faint);
-    display:flex; flex-direction:column; align-items:center; gap:2px; font-size:9.5px; font-weight:700;
-    padding:4px 8px; border-radius:12px; min-width:48px;}
-  .bnav button .bi{font-size:19px; line-height:1;}
-  .bnav button.on{color:var(--pri);}
-  .bnav button.on .bi{transform:translateY(-1px);}
+  /* ── Sidebar shell (replaces bottom nav) ── */
+  .app-shell{display:flex; align-items:flex-start;}
+  .sidebar{width:236px; flex-shrink:0; background:var(--card); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; padding:16px 12px; position:fixed; top:0; left:0; bottom:0;
+    overflow-y:auto; z-index:80; transition:transform .25s ease;}
+  .sidebar-brand{display:flex; align-items:center; gap:10px; padding:2px 6px 16px;}
+  .sidebar-brand .logo{width:36px; height:36px; border-radius:12px; font-size:16px; flex-shrink:0;}
+  .sidebar-brand b{font-size:14.5px; display:block;}
+  .sidebar-brand span{font-size:9.5px; color:var(--dim);}
+  .sidebar-section-lb{font-size:10px; color:var(--faint); text-transform:uppercase; letter-spacing:.05em; margin:14px 8px 6px; font-weight:700;}
+  .sidebar-profiles{display:flex; flex-direction:column; gap:3px;}
+  .sp-pill{display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:11px; border:none;
+    background:none; cursor:pointer; font-family:inherit; font-size:12.5px; color:var(--ink); text-align:left; width:100%;}
+  .sp-pill.on{background:var(--pri-soft); color:var(--pri); font-weight:800;}
+  .sp-pill .spd{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .sp-pill .spname{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .sp-add{font-size:11px; color:var(--pri); background:none; border:none; cursor:pointer; font-family:inherit;
+    text-align:left; padding:7px 10px; font-weight:700;}
+  .bnav{display:flex; flex-direction:column; gap:2px; position:static; background:none; box-shadow:none;
+    padding:0; border:none; max-width:none; margin:0; border-radius:0;}
+  .bnav button{background:none; border:none; cursor:pointer; font-family:inherit; color:var(--dim);
+    display:flex; flex-direction:row; align-items:center; gap:11px; font-size:13px; font-weight:700;
+    padding:10px 11px; border-radius:12px; width:100%; min-width:0;}
+  .bnav button .bi{font-size:17px; line-height:1;}
+  .bnav button.on{background:var(--pri-soft); color:var(--pri);}
+  .sidebar-scrim{display:none; position:fixed; inset:0; background:rgba(20,16,40,.45); z-index:70;}
+  .sidebar-scrim.on{display:block;}
+  .hamburger{display:none; width:34px; height:34px; border-radius:11px; background:var(--card); border:none;
+    cursor:pointer; font-size:16px; box-shadow:var(--shadow); color:var(--dim); flex-shrink:0;}
+  @media(max-width:860px){
+    .sidebar{transform:translateX(-100%);}
+    .sidebar.open{transform:translateX(0);}
+    .hamburger{display:flex; align-items:center; justify-content:center;}
+    .app-shell .wrap{margin-left:0 !important;}
+  }
+  @media(min-width:861px){
+    .app-shell .wrap{margin-left:236px;}
+  }
 
   /* ── Chart svg ── */
   .chart-box{background:var(--card2); border-radius:13px; padding:10px 8px 4px; margin-bottom:8px;}
@@ -310,7 +338,7 @@
   .g-cur-sub button{background:none; border:none; color:var(--pri); font-size:9.5px; font-family:inherit; cursor:pointer; padding:0; margin-left:4px;}
 
   /* ══ Chat quick-entry (FAB + bottom sheet) ══ */
-  .chat-fab{position:fixed; right:16px; bottom:calc(92px + env(safe-area-inset-bottom)); z-index:60;
+  .chat-fab{position:fixed; right:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:60;
     width:54px; height:54px; border-radius:50%; border:none; cursor:pointer; font-size:23px; color:#fff;
     background:linear-gradient(135deg,var(--pri) 10%,var(--pri2) 90%);
     box-shadow:0 8px 22px rgba(108,92,231,.45); display:flex; align-items:center; justify-content:center;
@@ -369,9 +397,33 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 </head>
 <body>
+<div class="app-shell">
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">M</div>
+    <div><b>Milk Hub</b><span>get wealth get health</span></div>
+  </div>
+
+  <div class="sidebar-section-lb">โปรไฟล์</div>
+  <div class="sidebar-profiles" id="sidebar-profiles"></div>
+  <button class="sp-add" id="sidebar-add-profile">➕ เพิ่มโปรไฟล์</button>
+
+  <div class="sidebar-section-lb">เมนู</div>
+  <nav class="bnav">
+    <button data-v="home" class="on"><span class="bi">🏠</span>หน้าหลัก</button>
+    <button data-v="money"><span class="bi">💸</span>เงิน</button>
+    <button data-v="tax"><span class="bi">🧾</span>ภาษี</button>
+    <button data-v="assets"><span class="bi">📈</span>พอร์ต</button>
+    <button data-v="goals"><span class="bi">🎯</span>เป้าหมาย</button>
+    <button data-v="health"><span class="bi">💗</span>สุขภาพ</button>
+    <button data-v="settings"><span class="bi">⚙️</span>ตั้งค่า</button>
+  </nav>
+</aside>
 <div class="wrap">
 
   <header>
+    <button class="hamburger" id="hamburger-btn">☰</button>
     <div class="logo">M</div>
     <div>
       <h1>Milk Hub <span>· get wealth get health</span></h1>
@@ -380,7 +432,6 @@
     <div class="h-right">
       <button class="profile-badge-btn" id="profile-badge" data-go="settings">👑 หลัก</button>
       <div class="sync-dot" id="syncDot">เชื่อมต่อ…</div>
-      <button class="gear" data-go="settings">⚙️</button>
     </div>
   </header>
 
@@ -394,6 +445,7 @@
         <div class="hchip"><div class="cl">↑ รายจ่าย</div><div class="cv num" id="h-ex">฿0</div></div>
         <div class="hchip"><div class="cl">💗 น้ำหนักล่าสุด</div><div class="cv num" id="h-weight">–</div></div>
       </div>
+      <svg id="h-spark-svg" viewBox="0 0 280 46" class="h-spark-svg"></svg>
     </div>
 
     <div class="tiles" style="grid-template-columns:repeat(5,1fr)">
@@ -1096,15 +1148,7 @@
 
 </div>
 
-<nav class="bnav">
-  <button data-v="home" class="on"><span class="bi">🏠</span>หน้าหลัก</button>
-  <button data-v="money"><span class="bi">💸</span>เงิน</button>
-  <button data-v="tax"><span class="bi">🧾</span>ภาษี</button>
-  <button data-v="assets"><span class="bi">📈</span>พอร์ต</button>
-  <button data-v="goals"><span class="bi">🎯</span>เป้าหมาย</button>
-  <button data-v="health"><span class="bi">💗</span>สุขภาพ</button>
-  <button data-v="settings"><span class="bi">⚙️</span>ตั้งค่า</button>
-</nav>
+</div>
 
 <button class="chat-fab" id="chat-fab" title="บันทึกด่วนแบบแชท">💬</button>
 
@@ -1198,12 +1242,17 @@ let HEALTH = { logs: [], checkups: [] };  // key: health:data
 let curTaxYear = '2569';
 
 /* ── nav ── */
-document.querySelectorAll('.bnav button').forEach(b=>{ b.onclick = ()=>show(b.dataset.v); });
+document.querySelectorAll('.bnav button').forEach(b=>{ b.onclick = ()=>{ show(b.dataset.v); closeSidebar(); }; });
 document.querySelectorAll('[data-go]').forEach(t=>{ t.onclick = ()=>show(t.dataset.go); });
 function show(v){
   document.querySelectorAll('.bnav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on', x.id==='v-'+v));
 }
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-scrim').classList.add('on'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-scrim').classList.remove('on'); }
+document.getElementById('hamburger-btn').onclick = openSidebar;
+document.getElementById('sidebar-scrim').onclick = closeSidebar;
+document.getElementById('sidebar-add-profile').onclick = ()=>{ show('settings'); closeSidebar(); openProfileEditor(null); };
 
 /* ════════ MONEY ════════ */
 async function saveMoney(){ await sSet(pKey('money:entries'), MONEY); }
@@ -1402,7 +1451,7 @@ function renderMoney(){
     document.getElementById('m-week-next').disabled = (mondayOf(new Date().toISOString().slice(0,10)) <= curWeekStart) && (listLatestWeekStart() <= curWeekStart);
   }
 
-  const rows = listE.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const rows = listE.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.id||'').localeCompare(a.id||''));
   document.getElementById('m-count').textContent = rows.length + ' รายการ · ' + listTxt;
   document.getElementById('m-rows').innerHTML = rows.length ? rows.map(e=>`
     <tr><td class="num" contenteditable data-ed="date" data-store="money" data-rid="${e.id}">${e.date||'-'}</td>
@@ -2195,6 +2244,42 @@ async function fileToDataUrl(file, maxDim){
     reader.onerror=reject; reader.readAsDataURL(file);
   });
 }
+/* ปรับภาพให้ OCR อ่านง่ายขึ้น: แปลงเป็นขาวดำ + ยืดคอนทราสต์ (ช่วยเรื่องแสงไม่สม่ำเสมอ/ตัวหนังสือจาง) */
+function enhanceCanvasForOcr(ctx, w, h){
+  const imgData = ctx.getImageData(0,0,w,h);
+  const d = imgData.data;
+  let min=255, max=0;
+  for(let i=0;i<d.length;i+=4){
+    const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    if(g<min) min=g; if(g>max) max=g;
+  }
+  const range = Math.max(1, max-min);
+  for(let i=0;i<d.length;i+=4){
+    const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    const v = Math.min(255, Math.max(0, Math.round((g-min)*255/range)));
+    d[i]=d[i+1]=d[i+2]=v;
+  }
+  ctx.putImageData(imgData,0,0);
+}
+/* รูปสำหรับส่งให้ OCR อ่านโดยเฉพาะ (คุณภาพสูงกว่ารูปที่ใช้เก็บ/แสดงผล + ปรับคอนทราสต์) */
+async function imageFileToOcrDataUrl(file, maxDim){
+  return new Promise((resolve,reject)=>{
+    const img = new Image(); const reader = new FileReader();
+    reader.onload = e=>{
+      img.onload = ()=>{
+        let {width:w,height:h} = img;
+        if(w>maxDim || h>maxDim){ const s=maxDim/Math.max(w,h); w*=s; h*=s; }
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        enhanceCanvasForOcr(ctx, w, h);
+        resolve(cv.toDataURL('image/jpeg',0.94));
+      };
+      img.onerror=reject; img.src=e.target.result;
+    };
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
+}
 /* ── แปลง PDF หน้าแรกเป็นรูปภาพ ก่อนส่งให้ OCR อ่าน (Tesseract อ่าน PDF ตรงๆ ไม่ได้) ── */
 let pdfjsReadyPromise = null;
 function ensurePdfJs(){
@@ -2223,12 +2308,19 @@ async function pdfFirstPageToImage(file, maxDim){
   const viewport = page.getViewport({scale});
   const canvas = document.createElement('canvas');
   canvas.width = viewport.width; canvas.height = viewport.height;
-  await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
-  return canvas.toDataURL('image/jpeg', 0.88);
+  const ctx = canvas.getContext('2d');
+  await page.render({canvasContext: ctx, viewport}).promise;
+  enhanceCanvasForOcr(ctx, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.94);
 }
 async function ocrInputDataUrl(file, maxDim){
   if(file.type === 'application/pdf') return await pdfFirstPageToImage(file, maxDim);
-  return await fileToDataUrl(file, maxDim);
+  return await imageFileToOcrDataUrl(file, maxDim);
+}
+/* แปลงเลขไทย (๐-๙) เป็นเลขอารบิกในข้อความที่ OCR อ่านมา — บางสลิป/เอกสารใช้เลขไทย ตัวจับตัวเลขเดิมจะมองไม่เห็นเลย */
+function normalizeOcrText(text){
+  const th = '๐๑๒๓๔๕๖๗๘๙';
+  return (text||'').replace(/[๐-๙]/g, ch => String(th.indexOf(ch)));
 }
 
 /* ── อ่านไฟล์ Excel/CSV (SheetJS โหลดตอนใช้จริง) — แปลงเป็นบรรทัดข้อความแล้วใช้ตัวแยกรายการเดียวกับแชท ── */
@@ -2320,7 +2412,7 @@ async function runOcr(file, statusElId, maxDim){
     if(statusEl) statusEl.textContent = 'กำลังอ่านตัวอักษร…';
     const { data } = await worker.recognize(dataUrl);
     if(statusEl) statusEl.textContent = '✓ อ่านเสร็จแล้ว';
-    return data.text || '';
+    return normalizeOcrText(data.text || '');
   }catch(e){
     console.error(e);
     if(statusEl) statusEl.textContent = '⚠️ อ่านไม่สำเร็จ';
@@ -2614,6 +2706,41 @@ function renderHome(){
 
   const debtTotal = (ASSETS.debts||[]).reduce((s,d)=>s+(+d.balance||0),0);
   document.getElementById('h-nw').textContent = fmt(total-debtTotal);
+
+  // สปาร์คไลน์กระแสเงินสดสุทธิ 6 เดือนล่าสุด (บนการ์ดเฮดเดอร์)
+  const sparkMonths = []; for(let i=5;i>=0;i--) sparkMonths.push(shiftYM(ym,-i));
+  const sparkNet = sparkMonths.map(m=>{
+    const e = MONEY.filter(x=>(x.date||'').startsWith(m));
+    return e.filter(x=>x.type==='income').reduce((s,x)=>s+x.amount,0) - e.filter(x=>x.type==='expense').reduce((s,x)=>s+x.amount,0);
+  });
+  drawHomeSparkline(document.getElementById('h-spark-svg'), sparkNet);
+}
+function drawHomeSparkline(svgEl, values){
+  if(!svgEl) return;
+  svgEl.innerHTML = '';
+  const ns='http://www.w3.org/2000/svg';
+  const W=280,H=46,pad=4;
+  const min = Math.min(0, ...values), max = Math.max(1, ...values);
+  const range = Math.max(1, max-min);
+  const stepX = (W-pad*2) / Math.max(1, values.length-1);
+  const toY = v => H-pad - ((v-min)/range)*(H-pad*2);
+  const pts = values.map((v,i)=>[pad+i*stepX, toY(v)]);
+  const linePts = pts.map(p=>p.join(',')).join(' ');
+  const areaPts = `${pad},${H-pad} ${linePts} ${W-pad},${H-pad}`;
+  const poly = document.createElementNS(ns,'polygon');
+  poly.setAttribute('points', areaPts); poly.setAttribute('fill','rgba(255,255,255,.18)');
+  svgEl.appendChild(poly);
+  const line = document.createElementNS(ns,'polyline');
+  line.setAttribute('points', linePts); line.setAttribute('fill','none');
+  line.setAttribute('stroke','rgba(255,255,255,.9)'); line.setAttribute('stroke-width','2');
+  line.setAttribute('stroke-linecap','round'); line.setAttribute('stroke-linejoin','round');
+  svgEl.appendChild(line);
+  pts.forEach(([x,y],i)=>{
+    const c = document.createElementNS(ns,'circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r', i===pts.length-1?3.5:2);
+    c.setAttribute('fill','#fff');
+    svgEl.appendChild(c);
+  });
 }
 
 /* ════════ GOALS — เป้าหมายเกษียณ/ความมั่งคั่ง ════════ */
@@ -3566,7 +3693,7 @@ document.getElementById('s-import-file').onchange = async e=>{
       await saveMoney(); await saveTax(); await saveAssets(); await saveGoals(); await saveHealth(); await saveCatRules();
     }
     await loadProfileData();   // โหลดข้อมูล+ธีมของโปรไฟล์ที่ active อยู่ตอนนี้เข้าหน่วยความจำ ให้ตรงกับที่เพิ่งเขียนลงไป
-    renderProfileList(); applyProfileFeatures();
+    renderProfileList(); renderSidebarProfiles(); applyProfileFeatures();
     renderAll(); toast('✓ นำเข้าข้อมูลสำเร็จ'+profileMsg);
   }catch(err){ toast('⚠️ ไฟล์ไม่ถูกต้อง'); }
 };
@@ -3983,7 +4110,7 @@ async function odRestore(){
       if(data.catRules) await sSet(pKey('money:catrules'), data.catRules);
     }
     await loadProfileData();
-    renderProfileList(); applyProfileFeatures();
+    renderProfileList(); renderSidebarProfiles(); applyProfileFeatures();
     renderAll();
     odSetStatus('on','เชื่อมต่อแล้ว'); toast('✓ กู้คืนข้อมูลจาก OneDrive แล้ว');
   }catch(e){ console.error(e); odSetStatus('err','กู้คืนไม่สำเร็จ'); }
@@ -4124,6 +4251,26 @@ function applyProfileFeatures(){
   const curActive = document.querySelector('.bnav button.on');
   if(curActive && curActive.style.display==='none') show('home');
 }
+async function switchToProfile(id){
+  if(id===activeProfileId) return;
+  activeProfileId = id; await saveProfiles();
+  await loadProfileData(); renderAll(); renderProfileList(); renderSidebarProfiles(); applyProfileFeatures();
+  closeSidebar();
+  toast('✓ สลับโปรไฟล์แล้ว');
+}
+function renderSidebarProfiles(){
+  const box = document.getElementById('sidebar-profiles'); if(!box) return;
+  box.innerHTML = PROFILES.map(p=>{
+    const isActive = p.id===activeProfileId;
+    const theme = THEME_PRESETS.find(t=>t.id===p.theme) || THEME_PRESETS[0];
+    return `<button class="sp-pill ${isActive?'on':''}" data-sp-switch="${p.id}">
+      <span class="spd" style="background:linear-gradient(135deg,${theme.pri},${theme.pri2})"></span>
+      <span style="font-size:14px">${p.icon||'👤'}</span>
+      <span class="spname">${esc(p.name)}</span>
+    </button>`;
+  }).join('');
+  document.querySelectorAll('[data-sp-switch]').forEach(b=>b.onclick = ()=>switchToProfile(b.dataset.spSwitch));
+}
 function renderProfileList(){
   const box = document.getElementById('profile-list');
   box.innerHTML = PROFILES.map(p=>{
@@ -4143,11 +4290,7 @@ function renderProfileList(){
       ${p.id==='default'?'':`<button class="del" data-pf-del="${p.id}">✕</button>`}
     </div>`;
   }).join('');
-  document.querySelectorAll('[data-pf-switch]').forEach(b=>b.onclick = async()=>{
-    activeProfileId = b.dataset.pfSwitch; await saveProfiles();
-    await loadProfileData(); renderAll(); renderProfileList(); applyProfileFeatures();
-    toast('✓ สลับโปรไฟล์แล้ว');
-  });
+  document.querySelectorAll('[data-pf-switch]').forEach(b=>b.onclick = ()=>switchToProfile(b.dataset.pfSwitch));
   document.querySelectorAll('[data-pf-edit]').forEach(b=>b.onclick = ()=>openProfileEditor(b.dataset.pfEdit));
   document.querySelectorAll('[data-pf-del]').forEach(b=>b.onclick = async()=>{
     if(!confirm('ลบโปรไฟล์นี้? (ข้อมูลของโปรไฟล์นี้จะไม่ถูกลบออกจากเครื่อง แต่จะเข้าถึงไม่ได้อีก)')) return;
@@ -4156,7 +4299,7 @@ function renderProfileList(){
     if(wasActive) activeProfileId = PROFILES[0].id;
     await saveProfiles();
     if(wasActive){ await loadProfileData(); renderAll(); }
-    renderProfileList(); applyProfileFeatures();
+    renderProfileList(); renderSidebarProfiles(); applyProfileFeatures();
   });
 }
 let pfEditingId = null;
@@ -4205,7 +4348,7 @@ document.getElementById('pf-save').onclick = async ()=>{
   pfEditingId = null;
   if(isNew){ await loadProfileData(); renderAll(); }
   else if(savedId===activeProfileId){ applyTheme(pfSelectedTheme); updateProfileBadge(); }
-  renderProfileList(); applyProfileFeatures();
+  renderProfileList(); renderSidebarProfiles(); applyProfileFeatures();
   toast(isNew ? '✓ สร้างโปรไฟล์ใหม่แล้ว — เป็นข้อมูลชุดใหม่ที่ยังว่างอยู่' : '✓ บันทึกโปรไฟล์แล้ว');
 };
 
