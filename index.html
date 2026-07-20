@@ -31,6 +31,15 @@
     font-size:15px; -webkit-font-smoothing:antialiased;}
   .num{font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
   .wrap{max-width:680px; margin:0 auto; padding:16px 14px calc(28px + env(safe-area-inset-bottom));}
+  @media(min-width:900px){ .app-shell .wrap{max-width:960px;} }
+  @media(min-width:1300px){ .app-shell .wrap{max-width:1240px;} }
+  .home-grid{display:grid; grid-template-columns:1fr; gap:13px; align-items:start;}
+  @media(min-width:900px){ .home-grid{grid-template-columns:1.35fr 1fr;} }
+  .h-activity-row{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line);}
+  .h-activity-row:last-child{border-bottom:none;}
+  .h-activity-ic{width:32px; height:32px; border-radius:10px; background:var(--card2); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;}
+  .h-activity-txt{flex:1; min-width:0; font-size:12.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .h-activity-sub{font-size:10.5px; color:var(--dim); margin-top:1px;}
 
   /* ── Header ── */
   header{display:flex; align-items:center; gap:11px; margin-bottom:14px; padding:2px 4px;}
@@ -355,9 +364,10 @@
   .chat-head .sub{font-size:10.5px; color:var(--dim);}
   .chat-close{margin-left:auto; width:30px; height:30px; border-radius:10px; border:none; background:var(--card2); cursor:pointer; font-size:14px; color:var(--dim);}
   .chat-body{flex:1; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:9px;}
-  .cmsg{max-width:86%; padding:9px 13px; border-radius:16px; font-size:13.5px; line-height:1.45; word-break:break-word;}
-  .cmsg.me{align-self:flex-end; background:linear-gradient(135deg,var(--pri),var(--pri2)); color:#fff; border-bottom-right-radius:5px;}
+  .cmsg{max-width:86%; padding:10px 14px; border-radius:17px; font-size:13.5px; line-height:1.5; word-break:break-word;}
+  .cmsg.me{align-self:flex-end; background:linear-gradient(135deg,var(--pri),var(--pri2)); color:#fff; border-bottom-right-radius:5px; box-shadow:0 3px 10px rgba(108,92,231,.28);}
   .cmsg.bot{align-self:flex-start; background:var(--card); border-bottom-left-radius:5px; box-shadow:var(--shadow);}
+  @media(min-width:900px){ .chat-panel{max-width:520px;} }
   .cmsg.bot .hintline{font-size:10.5px; color:var(--dim); margin-top:4px;}
   .cmsg img.catt{max-width:150px; border-radius:10px; display:block;}
   .cprev{align-self:flex-start; width:100%; max-width:340px; background:var(--card); border-radius:16px; border-bottom-left-radius:5px;
@@ -456,21 +466,55 @@
       <button class="tile" data-go="health"><div class="ic" style="background:var(--green-soft)">💗</div><div class="tt">สุขภาพ</div></button>
     </div>
 
-    <div class="grid3" style="margin-bottom:13px">
-      <div class="stat"><div class="lb">รายได้ปีภาษีนี้</div><div class="vl num a" id="h-gross">฿0</div><div class="sb" id="h-tax-sub"></div></div>
-      <div class="stat"><div class="lb">มูลค่าพอร์ต</div><div class="vl num b" id="h-port">฿0</div><div class="sb" id="h-port-sub"></div></div>
-      <div class="stat"><div class="lb">Net Worth</div><div class="vl num p" id="h-nw">฿0</div><div class="sb">ทรัพย์สิน − หนี้สิน</div></div>
-    </div>
+    <div class="home-grid">
+      <div>
+        <div class="grid3" style="margin-bottom:13px">
+          <div class="stat"><div class="lb">รายได้ปีภาษีนี้</div><div class="vl num a" id="h-gross">฿0</div><div class="sb" id="h-tax-sub"></div></div>
+          <div class="stat"><div class="lb">มูลค่าพอร์ต</div><div class="vl num b" id="h-port">฿0</div><div class="sb" id="h-port-sub"></div></div>
+          <div class="stat"><div class="lb">Net Worth</div><div class="vl num p" id="h-nw">฿0</div><div class="sb">ทรัพย์สิน − หนี้สิน</div></div>
+        </div>
 
-    <div class="card" id="h-goal-teaser" style="display:none">
-      <h2>🎯 ความคืบหน้าเป้าหมายความมั่งคั่ง <span class="tag">แตะเพื่อดูทั้งหมด</span></h2>
-      <div id="h-goal-rows"></div>
-    </div>
+        <div class="card" id="h-goal-teaser" style="display:none">
+          <h2>🎯 ความคืบหน้าเป้าหมายความมั่งคั่ง <span class="tag">แตะเพื่อดูทั้งหมด</span></h2>
+          <div id="h-goal-rows"></div>
+        </div>
 
-    <div class="card">
-      <h2>📎 แนบรูป ให้ระบบอ่านตัวเลขให้อัตโนมัติ</h2>
-      <div class="hint" style="margin-top:0">
-        ในแท็บ <b>เงิน</b> และ <b>ภาษี</b> มีปุ่ม "แนบรูปให้ระบบอ่าน (OCR)" — แนบรูปใบเสร็จหรือสลิปเงินเดือน ระบบจะพยายามดึงตัวเลขมาเติมในฟอร์มให้ ⚠️ เป็นการอ่านแบบประมวลผลในเครื่อง ความแม่นยำไม่เท่า AI ควรเช็คตัวเลขก่อนกดบันทึกทุกครั้ง · รองรับเฉพาะไฟล์รูปภาพ ไม่รองรับวิดีโอ
+        <div class="card">
+          <h2>📎 แนบรูป ให้ระบบอ่านตัวเลขให้อัตโนมัติ</h2>
+          <div class="hint" style="margin-top:0">
+            ในแท็บ <b>เงิน</b> และ <b>ภาษี</b> มีปุ่ม "แนบรูปให้ระบบอ่าน (OCR)" — แนบรูปใบเสร็จหรือสลิปเงินเดือน ระบบจะพยายามดึงตัวเลขมาเติมในฟอร์มให้ ⚠️ เป็นการอ่านแบบประมวลผลในเครื่อง ความแม่นยำไม่เท่า AI ควรเช็คตัวเลขก่อนกดบันทึกทุกครั้ง
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>🍩 สัดส่วนรายจ่าย <span class="tag" id="h-don-tag"></span></h2>
+          <div class="m-mode-tabs" style="justify-content:flex-start">
+            <button class="m-mode-btn on" id="h-don-mode-month">🗓️ เดือน</button>
+            <button class="m-mode-btn" id="h-don-mode-year">📆 ปี</button>
+          </div>
+          <div class="m-month-nav" id="h-don-month-nav" style="justify-content:flex-start; gap:10px">
+            <button class="m-nav-btn" id="h-don-month-prev">‹</button>
+            <div class="m-month-cur" id="h-don-month-cur" style="min-width:110px">-</div>
+            <button class="m-nav-btn" id="h-don-month-next">›</button>
+          </div>
+          <div class="m-month-nav" id="h-don-year-nav" style="display:none; justify-content:flex-start; gap:10px">
+            <button class="m-nav-btn" id="h-don-year-prev">‹</button>
+            <div class="m-month-cur" id="h-don-year-cur" style="min-width:110px">-</div>
+            <button class="m-nav-btn" id="h-don-year-next">›</button>
+          </div>
+          <div class="donut-wrap">
+            <svg id="h-don-svg" viewBox="0 0 120 120" class="donut-svg"></svg>
+            <div class="donut-center"><div id="h-don-total" class="donut-total">฿0</div><div class="donut-total-lb">รวมรายจ่าย</div></div>
+          </div>
+          <div id="h-don-legend" class="donut-legend"></div>
+        </div>
+
+        <div class="card">
+          <h2>🕓 กิจกรรมล่าสุด</h2>
+          <div id="h-activity-list"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2721,6 +2765,71 @@ function renderHome(){
     return e.filter(x=>x.type==='income').reduce((s,x)=>s+x.amount,0) - e.filter(x=>x.type==='expense').reduce((s,x)=>s+x.amount,0);
   });
   drawHomeSparkline(document.getElementById('h-spark-svg'), sparkNet);
+  renderHomeDonut();
+  renderHomeActivity();
+}
+/* ── สัดส่วนรายจ่ายบนแดชบอร์ด: เลือกดูย้อนหลังแบบเดือน/ปี ── */
+let hDonMode = 'month';
+let hDonYM = null;
+let hDonYear = null;
+function renderHomeDonut(){
+  if(!hDonYM) hDonYM = moneyLatestYM();
+  if(!hDonYear) hDonYear = moneyLatestYear();
+  document.getElementById('h-don-mode-month').classList.toggle('on', hDonMode==='month');
+  document.getElementById('h-don-mode-year').classList.toggle('on', hDonMode==='year');
+  document.getElementById('h-don-month-nav').style.display = hDonMode==='month' ? 'flex' : 'none';
+  document.getElementById('h-don-year-nav').style.display = hDonMode==='year' ? 'flex' : 'none';
+
+  let filtered, label;
+  if(hDonMode==='year'){
+    filtered = MONEY.filter(e=>(e.date||'').startsWith(hDonYear));
+    label = 'ปี ' + hDonYear;
+    document.getElementById('h-don-year-cur').textContent = hDonYear;
+    document.getElementById('h-don-year-next').disabled = (hDonYear >= moneyLatestYear());
+  } else {
+    const [yy,mm] = hDonYM.split('-');
+    filtered = MONEY.filter(e=>(e.date||'').startsWith(hDonYM));
+    label = TH_MONTHS[parseInt(mm)-1] + ' ' + yy;
+    document.getElementById('h-don-month-cur').textContent = label;
+    document.getElementById('h-don-month-next').disabled = (hDonYM >= moneyLatestYM());
+  }
+  document.getElementById('h-don-tag').textContent = label;
+
+  const cats = {};
+  filtered.filter(e=>e.type==='expense').forEach(e=>{ cats[e.category||'อื่นๆ'] = (cats[e.category||'อื่นๆ']||0)+e.amount; });
+  const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const colors = ['#6C5CE7','#F0980F','#3E8EF0','#12A97C','#EA4D67','#FF9F68','#25C6DE','#F97FB5'];
+  const donutData = entries.slice(0,8).map(([c,v],i)=>({label:c, value:v, color:colors[i%colors.length]}));
+  const exp = entries.reduce((s,[,v])=>s+v, 0);
+  drawDonut(document.getElementById('h-don-svg'), donutData);
+  document.getElementById('h-don-total').textContent = fmt(exp);
+  document.getElementById('h-don-legend').innerHTML = donutData.length ? donutData.map(d=>
+    `<span><i style="background:${d.color}"></i>${esc(d.label)} <b>${(d.value/exp*100).toFixed(0)}%</b></span>`).join('') : '<span class="empty">ยังไม่มีข้อมูล</span>';
+}
+document.getElementById('h-don-mode-month').onclick = ()=>{ hDonMode='month'; renderHomeDonut(); };
+document.getElementById('h-don-mode-year').onclick = ()=>{ hDonMode='year'; renderHomeDonut(); };
+document.getElementById('h-don-month-prev').onclick = ()=>{ hDonYM = shiftYM(hDonYM||moneyLatestYM(), -1); renderHomeDonut(); };
+document.getElementById('h-don-month-next').onclick = ()=>{ if((hDonYM||moneyLatestYM()) < moneyLatestYM()){ hDonYM = shiftYM(hDonYM||moneyLatestYM(), 1); renderHomeDonut(); } };
+document.getElementById('h-don-year-prev').onclick = ()=>{ hDonYear = String(parseInt(hDonYear||moneyLatestYear())-1); renderHomeDonut(); };
+document.getElementById('h-don-year-next').onclick = ()=>{ const y=String(parseInt(hDonYear||moneyLatestYear())+1); if(y<=moneyLatestYear()){ hDonYear=y; renderHomeDonut(); } };
+
+/* ── กิจกรรมล่าสุด: รวมรายการเงิน + บันทึกสุขภาพ เรียงตามวันที่ล่าสุด ── */
+function renderHomeActivity(){
+  const items = [];
+  MONEY.forEach(e=>items.push({date:e.date||'', id:e.id, icon:e.type==='income'?'💰':'💸',
+    text:(e.item||e.category||'รายการ'), sub:(e.type==='income'?'+':'-')+fmt(e.amount)}));
+  (HEALTH.logs||[]).forEach(l=>items.push({date:l.date||'', id:l.id, icon:'💗', text:'บันทึกสุขภาพ',
+    sub:[l.weight?l.weight+' กก.':'', l.rhr?'RHR '+l.rhr:''].filter(Boolean).join(' · ')}));
+  items.sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.id||'').localeCompare(a.id||''));
+  const top = items.slice(0,6);
+  document.getElementById('h-activity-list').innerHTML = top.length ? top.map(it=>`
+    <div class="h-activity-row">
+      <div class="h-activity-ic">${it.icon}</div>
+      <div style="flex:1; min-width:0">
+        <div class="h-activity-txt">${esc(it.text)}</div>
+        <div class="h-activity-sub">${it.date}${it.sub?' · '+esc(it.sub):''}</div>
+      </div>
+    </div>`).join('') : '<div class="empty">ยังไม่มีกิจกรรม</div>';
 }
 function drawHomeSparkline(svgEl, values){
   if(!svgEl) return;
