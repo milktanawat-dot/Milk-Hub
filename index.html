@@ -1267,21 +1267,26 @@ function moneyLatestYear(){
 let listMode = 'week';   // 'week' | 'custom' — สำหรับตาราง "รายการ" แยกจากสรุปด้านบน
 let curWeekStart = null;   // 'YYYY-MM-DD' — วันจันทร์ของสัปดาห์ที่กำลังดู
 let listCustomFrom = null, listCustomTo = null;
+/* วันที่แบบ local timezone เสมอ — ห้ามใช้ .toISOString() กับวันที่ล้วนๆ เพราะจะเพี้ยนไป 1 วันในโซนเวลาที่เร็วกว่า UTC (เช่นไทย UTC+7) */
+function toLocalISODate(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function todayLocalISO(){ return toLocalISODate(new Date()); }
 function mondayOf(dstr){
   const d = new Date(dstr+'T00:00:00');
   const dow = d.getDay();   // 0=อาทิตย์ .. 6=เสาร์
   const diff = (dow===0 ? -6 : 1-dow);   // ถอยไปวันจันทร์
   d.setDate(d.getDate()+diff);
-  return d.toISOString().slice(0,10);
+  return toLocalISODate(d);
 }
 function shiftDate(dstr, days){
   const d = new Date(dstr+'T00:00:00');
   d.setDate(d.getDate()+days);
-  return d.toISOString().slice(0,10);
+  return toLocalISODate(d);
 }
 function listLatestWeekStart(){
   const dates = MONEY.map(e=>e.date).filter(Boolean).sort();
-  const nowMon = mondayOf(new Date().toISOString().slice(0,10));
+  const nowMon = mondayOf(todayLocalISO());
   if(!dates.length) return nowMon;
   const latestMon = mondayOf(dates[dates.length-1]);
   return latestMon > nowMon ? latestMon : nowMon;
@@ -1290,7 +1295,8 @@ function fmtDayShort(iso){ const [,m,d] = iso.split('-'); return parseInt(d) + '
 let customFrom = null, customTo = null;   // 'YYYY-MM-DD'
 function moneyLatestYM(){
   const yms = [...new Set(MONEY.map(e=>(e.date||'').slice(0,7)).filter(Boolean))].sort();
-  const nowYm = new Date().toISOString().slice(0,7);
+  const now = new Date();
+  const nowYm = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   return yms.length ? (yms[yms.length-1] > nowYm ? yms[yms.length-1] : nowYm) : nowYm;
 }
 function shiftYM(ym, delta){
@@ -1448,7 +1454,7 @@ function renderMoney(){
     listE = MONEY.filter(e=>e.date && e.date>=curWeekStart && e.date<=weekEnd);
     listTxt = fmtDayShort(curWeekStart) + ' – ' + fmtDayShort(weekEnd);
     document.getElementById('m-week-cur').textContent = listTxt;
-    document.getElementById('m-week-next').disabled = (mondayOf(new Date().toISOString().slice(0,10)) <= curWeekStart) && (listLatestWeekStart() <= curWeekStart);
+    document.getElementById('m-week-next').disabled = (mondayOf(todayLocalISO()) <= curWeekStart) && (listLatestWeekStart() <= curWeekStart);
   }
 
   const rows = listE.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.id||'').localeCompare(a.id||''));
@@ -1483,7 +1489,7 @@ document.getElementById('m-mode-custom').onclick = ()=>{
     const ym = curMoneyYM || moneyLatestYM();
     const [yy,mm] = ym.split('-');
     document.getElementById('m-custom-from').value = `${yy}-${mm}-01`;
-    document.getElementById('m-custom-to').value = new Date(parseInt(yy), parseInt(mm), 0).toISOString().slice(0,10);
+    document.getElementById('m-custom-to').value = toLocalISODate(new Date(parseInt(yy), parseInt(mm), 0));
   }
   renderMoney();
 };
@@ -1498,7 +1504,7 @@ document.getElementById('m-custom-apply').onclick = ()=>{
 document.getElementById('m-week-prev').onclick = ()=>{ curWeekStart = shiftDate(curWeekStart || listLatestWeekStart(), -7); renderMoney(); };
 document.getElementById('m-week-next').onclick = ()=>{
   const next = shiftDate(curWeekStart || listLatestWeekStart(), 7);
-  const capMon = mondayOf(new Date().toISOString().slice(0,10));
+  const capMon = mondayOf(todayLocalISO());
   const latestMon = listLatestWeekStart();
   const cap = latestMon > capMon ? latestMon : capMon;
   if(next <= cap){ curWeekStart = next; renderMoney(); }
@@ -1628,7 +1634,7 @@ document.getElementById('m-add').onclick = async ()=>{
   if(!amt){ toast('ใส่จำนวนเงินก่อน'); return; }
   MONEY.push({
     id: uid(),
-    date: document.getElementById('m-date').value || new Date().toISOString().slice(0,10),
+    date: document.getElementById('m-date').value || todayLocalISO(),
     type: document.getElementById('m-type').value,
     category: document.getElementById('m-cat').value.trim() || 'อื่นๆ',
     item: document.getElementById('m-item').value.trim(),
@@ -2208,7 +2214,7 @@ function drawTrend(svgId, rangeId, logs, field, color, unit){
   rangeEl.textContent = `${ys[ys.length-1]}${unit} (ล่าสุด) · ช่วง ${minY}–${maxY}${unit}`;
 }
 document.getElementById('he-add').onclick = async ()=>{
-  const date = document.getElementById('he-date').value || new Date().toISOString().slice(0,10);
+  const date = document.getElementById('he-date').value || todayLocalISO();
   const weight = parseFloat(document.getElementById('he-weight').value)||null;
   const fat = parseFloat(document.getElementById('he-fat').value)||null;
   const rhr = parseFloat(document.getElementById('he-rhr').value)||null;
@@ -2485,7 +2491,7 @@ function dayIdxOfLine(line){
 }
 function parseWeeklyPairs(text){
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
-  const monday = mondayOf(new Date().toISOString().slice(0,10));
+  const monday = mondayOf(todayLocalISO());
   const seen = {};
   for(const line of lines){
     const dayIdx = dayIdxOfLine(line);
@@ -2682,7 +2688,8 @@ document.getElementById('hc-add').onclick = async ()=>{
 
 /* ════════ HOME summary ════════ */
 function renderHome(){
-  const ym = new Date().toISOString().slice(0,7);
+  const nowD = new Date();
+  const ym = nowD.getFullYear() + '-' + String(nowD.getMonth()+1).padStart(2,'0');
   const mE = MONEY.filter(e=>(e.date||'').startsWith(ym));
   const inc = mE.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
   const exp = mE.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
@@ -3530,7 +3537,7 @@ function renderGoals(){
       const v = parseFloat(inp.value);
       const live = Math.round(currentValueFor(g.targetId));
       if(inp.value==='' || isNaN(v) || Math.round(v)===live){ g.valueOverride = null; } // เท่ากับค่าจากพอร์ต → ไม่ต้อง override
-      else{ g.valueOverride = {value: v, updatedAt: new Date().toISOString().slice(0,10)}; }
+      else{ g.valueOverride = {value: v, updatedAt: todayLocalISO()}; }
       await saveGoals();
       renderGoals();
       toast(g.valueOverride ? '✓ อัปเดตมูลค่าปัจจุบันแล้ว — คำนวณต่อจากตัวเลขนี้' : '✓ ใช้มูลค่าจากพอร์ตตามปกติ');
@@ -3663,7 +3670,7 @@ document.getElementById('s-export').onclick = async ()=>{
   const blob = new Blob([JSON.stringify({profiles:PROFILES, activeProfileId, allProfileData, exported:new Date().toISOString()},null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'milk-hub-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'milk-hub-backup-' + todayLocalISO() + '.json';
   a.click();
 };
 document.getElementById('s-import-file').onchange = async e=>{
@@ -3719,8 +3726,8 @@ function initSelectors(){
   ySel.innerHTML = years.map(y=>`<option>${y}</option>`).join('');
   curTaxYear = String(Math.min(thisBE, Math.max(...years)));
   ySel.value = curTaxYear;
-  document.getElementById('m-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('he-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('m-date').value = todayLocalISO();
+  document.getElementById('he-date').value = todayLocalISO();
 }
 function renderAll(){ renderMoney(); renderTax(); renderAssets(); renderGoals(); renderHealth(); renderHome(); }
 
@@ -3834,7 +3841,7 @@ function chatGuessCategory(text, type){
 }
 function chatParseDate(text){
   const today = new Date();
-  const iso = d => d.toISOString().slice(0,10);
+  const iso = d => toLocalISODate(d);
   if(/เมื่อวานซืน/.test(text)){ const d=new Date(today); d.setDate(d.getDate()-2); return {date:iso(d), rest:text.replace(/เมื่อวานซืน/,'')}; }
   if(/เมื่อวาน/.test(text)){ const d=new Date(today); d.setDate(d.getDate()-1); return {date:iso(d), rest:text.replace(/เมื่อวาน/,'')}; }
   const full = text.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/);
@@ -3914,7 +3921,7 @@ function chatPreview(parsed){
     if(!amt){ toast('ใส่จำนวนเงินก่อน'); return; }
     const entry = {
       id: uid(),
-      date: document.getElementById(`cp-date-${pid}`).value || new Date().toISOString().slice(0,10),
+      date: document.getElementById(`cp-date-${pid}`).value || todayLocalISO(),
       type: document.getElementById(`cp-type-${pid}`).value,
       category: document.getElementById(`cp-cat-${pid}`).value.trim() || 'อื่นๆ',
       item: document.getElementById(`cp-item-${pid}`).value.trim(),
@@ -3992,7 +3999,7 @@ async function processReceiptFile(f){
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
   const amt = findNearNumber(lines, ['รวม','total','จำนวนเงิน','ยอดรวม','net','amount']) ??
               (lines.map(ocrNum).filter(n=>n!==null && n>0).sort((a,b)=>b-a)[0] ?? null);
-  const date = findDate(text) || new Date().toISOString().slice(0,10);
+  const date = findDate(text) || todayLocalISO();
   // เดาชื่อร้าน/รายการจากบรรทัดแรกๆ ที่เป็นตัวหนังสือ
   const itemGuess = (lines.find(l=>/[ก-๙a-zA-Z]{3,}/.test(l) && !/รวม|total|บาท|thb|tax|vat/i.test(l)) || '').slice(0,40);
   status.innerHTML = amt!==null ? `✓ อ่านได้ยอด <b>${fmt(amt)}</b> — เช็คแล้วกดบันทึกได้เลย` : '⚠️ อ่านยอดเงินไม่เจอ กรอกเองในการ์ดด้านล่างนะ';
