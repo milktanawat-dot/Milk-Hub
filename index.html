@@ -42,17 +42,18 @@
   .h-activity-sub{font-size:10.5px; color:var(--dim); margin-top:1px;}
 
   /* ── Header ── */
-  header{display:flex; align-items:center; gap:11px; margin-bottom:14px; padding:2px 4px;}
+  header{display:flex; align-items:center; gap:11px; margin-bottom:14px; padding:2px 4px; flex-wrap:wrap;}
   .logo{width:42px; height:42px; border-radius:13px; flex-shrink:0;
     background:linear-gradient(135deg,var(--pri) 10%,var(--pri2) 90%);
     display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:18px;
     box-shadow:0 5px 14px rgba(108,92,231,.35);}
-  header h1{font-size:17.5px; font-weight:800; letter-spacing:.1px;}
+  .h-title{flex:1 1 150px; min-width:0;}
+  header h1{font-size:17.5px; font-weight:800; letter-spacing:.1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   header h1 span{background:linear-gradient(90deg,var(--pri),var(--pri2)); -webkit-background-clip:text; background-clip:text; color:transparent;}
-  header .sub{font-size:11px; color:var(--dim); margin-top:1px;}
-  .h-right{margin-left:auto; display:flex; align-items:center; gap:8px;}
+  header .sub{font-size:11px; color:var(--dim); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .h-right{margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0;}
   .sync-dot{font-size:10.5px; color:var(--dim); display:flex; align-items:center; gap:5px; background:var(--card);
-    padding:5px 10px; border-radius:99px; box-shadow:var(--shadow);}
+    padding:5px 10px; border-radius:99px; box-shadow:var(--shadow); white-space:nowrap;}
   .sync-dot::before{content:''; width:7px; height:7px; border-radius:50%; background:var(--faint); flex-shrink:0;}
   .sync-dot.ok::before{background:var(--green); box-shadow:0 0 6px rgba(18,169,124,.6);}
   .sync-dot.err::before{background:var(--red);}
@@ -84,6 +85,7 @@
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
   @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
+  @media(max-width:420px){ header h1 span{display:none;} }
 
   .stat{background:var(--card); border-radius:15px; padding:14px 13px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
   .stat .lb{font-size:10.5px; color:var(--dim); margin-bottom:3px; font-weight:600;}
@@ -95,6 +97,16 @@
   .stat-in .stat-ico{background:var(--green-soft);}
   .stat-ex .stat-ico{background:var(--red-soft);}
   .stat-net .stat-ico{background:var(--pri-soft);}
+
+  /* ── Today spend bar ── */
+  .today-bar{display:flex; align-items:center; gap:12px; background:var(--card); border-radius:15px;
+    padding:12px 14px; margin-bottom:13px; box-shadow:var(--shadow);}
+  .today-bar .tb-ic{width:38px; height:38px; border-radius:11px; background:var(--red-soft); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:17px;}
+  .today-bar .tb-txt{flex:1; min-width:0;}
+  .today-bar .tb-lb{font-size:11.5px; font-weight:700; color:var(--ink);}
+  .today-bar .tb-date{font-size:10.5px; color:var(--dim); margin-top:1px;}
+  .today-bar .tb-amt{font-size:19px; font-weight:800; color:var(--red); white-space:nowrap; flex-shrink:0;}
   .g{color:var(--green);} .r{color:var(--red);} .a{color:var(--amber);} .b{color:var(--sky);} .p{color:var(--pri);}
 
   /* ── Month navigator ── */
@@ -435,7 +447,7 @@
   <header>
     <button class="hamburger" id="hamburger-btn">☰</button>
     <div class="logo">M</div>
-    <div>
+    <div class="h-title">
       <h1>Milk Hub <span>· get wealth get health</span></h1>
       <div class="sub">การเงิน + สุขภาพ ในที่เดียว — บันทึกในเครื่องนี้ ใช้แบบออฟไลน์ได้</div>
     </div>
@@ -559,6 +571,15 @@
       <label><span>ถึงวันที่</span><input type="date" id="m-custom-to"></label>
       <button class="btn sm" id="m-custom-apply">แสดงผล</button>
     </div>
+    <div class="today-bar" id="m-today-bar">
+      <div class="tb-ic">📅</div>
+      <div class="tb-txt">
+        <div class="tb-lb">ใช้จ่ายวันนี้</div>
+        <div class="tb-date" id="m-today-date">–</div>
+      </div>
+      <div class="tb-amt num" id="m-today-amt">฿0</div>
+    </div>
+
     <div class="grid3" style="margin-bottom:13px">
       <div class="stat stat-in"><div class="stat-ico">💰</div><div class="lb" id="m-month-lb">รายรับ</div><div class="vl num g" id="m-in">฿0</div></div>
       <div class="stat stat-ex"><div class="stat-ico">📤</div><div class="lb">รายจ่าย</div><div class="vl num r" id="m-ex">฿0</div></div>
@@ -1455,6 +1476,12 @@ function renderMoney(){
   const net = inc-exp;
   const netEl = document.getElementById('m-net');
   netEl.textContent = fmt(net); netEl.className = 'vl num ' + (net>=0?'g':'r');
+
+  // ใช้จ่ายวันนี้ — คำนวณจากวันจริงเสมอ ไม่ขึ้นกับเดือน/ปี/ช่วงที่กำลังดูอยู่
+  const todayISO = todayLocalISO();
+  const todayExp = MONEY.filter(e=>e.type==='expense' && e.date===todayISO).reduce((s,e)=>s+e.amount,0);
+  document.getElementById('m-today-date').textContent = fmtThaiDate(todayISO);
+  document.getElementById('m-today-amt').textContent = fmt(todayExp);
 
   const cats = {};
   monthE.filter(e=>e.type==='expense').forEach(e=>{ cats[e.category||'อื่นๆ'] = (cats[e.category||'อื่นๆ']||0)+e.amount; });
