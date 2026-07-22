@@ -2403,6 +2403,28 @@ async function pdfFirstPageToImage(file, maxDim){
   enhanceCanvasForOcr(ctx, canvas.width, canvas.height);
   return canvas.toDataURL('image/jpeg', 0.94);
 }
+/* ดึงข้อความจริงจาก PDF โดยตรง (ไม่ผ่าน OCR เลย) — PDF ที่สร้างจากโปรแกรม/ระบบ (สลิปเงินเดือน, e-statement)
+   เกือบทั้งหมดมีเลเยอร์ข้อความฝังอยู่แล้ว อ่านตรงๆ แม่นยำ 100% เร็วกว่า OCR มาก ไม่มีปัญหาอ่านเลขผิด
+   ใช้แทน OCR ทุกครั้งที่ทำได้ — OCR ไว้สำรองเฉพาะ PDF ที่เป็นภาพสแกน (ไม่มีเลเยอร์ข้อความจริง) เท่านั้น */
+async function pdfExtractText(file){
+  const pdfjsLib = await ensurePdfJs();
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const page = await pdf.getPage(1);
+  const content = await page.getTextContent();
+  if(!content.items.length) return '';
+  // จัดกลุ่มชิ้นข้อความเป็น "บรรทัด" ตามตำแหน่งแนวตั้งที่ใกล้กัน แล้วเรียงซ้าย→ขวาในแต่ละบรรทัด
+  const rows = [];
+  content.items.forEach(it=>{
+    const y = it.transform[5], x = it.transform[4];
+    let row = rows.find(r => Math.abs(r.y - y) < 3);
+    if(!row){ row = {y, items:[]}; rows.push(row); }
+    row.items.push({x, str: it.str});
+  });
+  rows.sort((a,b)=> b.y - a.y);   // y มาก = อยู่บนของหน้า (ระบบพิกัด PDF นับจากล่าง) → เรียงบนลงล่าง
+  return rows.map(r => r.items.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim())
+    .filter(Boolean).join('\n');
+}
 async function ocrInputDataUrl(file, maxDim){
   if(file.type === 'application/pdf') return await pdfFirstPageToImage(file, maxDim);
   return await imageFileToOcrDataUrl(file, maxDim);
@@ -2471,12 +2493,16 @@ function lastOcrNum(str){
   return matches.length ? parseFloat(matches[matches.length-1][0]) : null;
 }
 /* หาเลขที่อยู่ใกล้ที่สุดกับ keyword — เช็คทั้งข้างหลัง, ข้างหน้า (กรณีตารางเอาจำนวนเงินไว้ก่อนชื่อรายการ), และบรรทัดติดกัน */
+/* ไล่ตามลำดับความสำคัญของ "keywords" ที่ผู้เรียกกำหนด (คำเฉพาะเจาะจงสุดควรอยู่ต้นลิสต์) —
+   ค้นคำแรกในลิสต์ทั่วทั้งเอกสารก่อน ถ้าไม่เจอเลยค่อยลองคำถัดไป กันปัญหาคำทั่วไป (เช่น "เงินเดือน" ที่ไปโผล่ในหัวตาราง/ชื่อคอลัมน์)
+   ไปแย่งจับคู่ก่อนถึงบรรทัดที่มีคำเฉพาะเจาะจงจริงๆ (เช่น "รวมเงินได้ทั้งสิ้น" ที่อยู่ท้ายเอกสาร) */
 function findNearNumber(lines, keywords){
-  for(let i=0;i<lines.length;i++){
-    const low = lines[i].toLowerCase();
-    const kw = keywords.find(k=>low.includes(k.toLowerCase()));
-    if(kw){
-      const idx = low.indexOf(kw.toLowerCase());
+  for(const kw of keywords){
+    const kwLow = kw.toLowerCase();
+    for(let i=0;i<lines.length;i++){
+      const low = lines[i].toLowerCase();
+      const idx = low.indexOf(kwLow);
+      if(idx===-1) continue;
       let n = ocrNum(lines[i].slice(idx+kw.length));
       if(n!==null) return n;
       n = lastOcrNum(lines[i].slice(0, idx));
@@ -2500,23 +2526,35 @@ function findDate(text){
 }
 async function runOcr(file, statusElId, maxDim){
   const statusEl = document.getElementById(statusElId);
+  const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name||'');
+  if(isPdf){
+    if(statusEl) statusEl.textContent = 'กำลังอ่านข้อความจาก PDF โดยตรง…';
+    try{
+      const text = await pdfExtractText(file);
+      if(text.replace(/\s/g,'').length > 15){
+        if(statusEl) statusEl.textContent = '✓ อ่านข้อความจาก PDF โดยตรง (แม่นยำสูง ไม่ผ่าน OCR)';
+        return normalizeOcrText(text);
+      }
+      // ข้อความว่าง/สั้นเกินไป — PDF นี้น่าจะเป็นภาพสแกน ไปต่อ OCR ตามปกติด้านล่าง
+    }catch(e){ console.warn('อ่านข้อความ PDF โดยตรงไม่สำเร็จ ลอง OCR แทน', e); }
+  }
   if(typeof Tesseract === 'undefined'){
     if(statusEl) statusEl.textContent = '⚠️ โหลดตัวอ่าน OCR ไม่สำเร็จ (ต้องต่อเน็ตครั้งแรก)';
     toast('⚠️ โหลด OCR ไม่สำเร็จ — ต้องมีอินเทอร์เน็ตตอนโหลดครั้งแรก');
     return null;
   }
-  if(statusEl) statusEl.textContent = file.type==='application/pdf' ? 'กำลังแปลง PDF เป็นรูป…' : 'กำลังเตรียมตัวอ่าน…';
+  if(statusEl) statusEl.textContent = isPdf ? 'กำลังแปลง PDF เป็นรูป…' : 'กำลังเตรียมตัวอ่าน…';
   try{
     const worker = await getOcrWorker();
     const dataUrl = await ocrInputDataUrl(file, maxDim||1800);
     if(statusEl) statusEl.textContent = 'กำลังอ่านตัวอักษร…';
     const { data } = await worker.recognize(dataUrl);
-    if(statusEl) statusEl.textContent = '✓ อ่านเสร็จแล้ว';
+    if(statusEl) statusEl.textContent = '✓ อ่านเสร็จแล้ว (OCR)';
     return normalizeOcrText(data.text || '');
   }catch(e){
     console.error(e);
     if(statusEl) statusEl.textContent = '⚠️ อ่านไม่สำเร็จ';
-    toast(file.type==='application/pdf' ? '⚠️ อ่านไฟล์ PDF นี้ไม่สำเร็จ ลองไฟล์อื่นหรือแคปหน้าจอเป็นรูปแทน' : '⚠️ OCR อ่านรูปนี้ไม่สำเร็จ ลองรูปที่คมชัดกว่านี้');
+    toast(isPdf ? '⚠️ อ่านไฟล์ PDF นี้ไม่สำเร็จ ลองไฟล์อื่นหรือแคปหน้าจอเป็นรูปแทน' : '⚠️ OCR อ่านรูปนี้ไม่สำเร็จ ลองรูปที่คมชัดกว่านี้');
     return null;
   }
 }
@@ -2564,10 +2602,10 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   document.getElementById('t-ocr-debug').style.display = '';
   document.getElementById('t-ocr-rawtext').textContent = text;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
-  const gross = findNearNumber(lines, ['รวมเงินได้','เงินได้สุทธิ','เงินเดือน','gross','รายได้รวม','เงินได้พึงประเมิน','total income','net pay','เงินได้ทั้งสิ้น']);
-  const wh = findNearNumber(lines, ['ภาษีหัก','withholding','ภาษี ณ ที่จ่าย','ภงด','หัก ณ ที่จ่าย','tax withheld','income tax']);
+  const gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้','เงินได้สุทธิ','net pay','total income','เงินได้พึงประเมิน','รายได้รวม','gross','เงินเดือน']);
+  const wh = findNearNumber(lines, ['ภาษีหัก ณ ที่จ่าย','หัก ณ ที่จ่าย','ภาษีหัก','tax withheld','withholding','ภงด','income tax']);
   const sso = findNearNumber(lines, ['ประกันสังคม','social security','sso','ปกส']);
-  const pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','pvd','provident','กบข','สะสม pvd']);
+  const pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','เงินกองทุนสำรองเลี้ยงชีพ','pvd','provident','กบข','สะสม pvd']);
   if(gross!==null) document.getElementById('t-gross').value = gross;
   if(wh!==null) document.getElementById('t-wh').value = wh;
   if(sso!==null) document.getElementById('t-sso').value = sso;
