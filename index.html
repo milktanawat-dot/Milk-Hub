@@ -2413,7 +2413,13 @@ async function pdfExtractText(file){
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({data: buf}).promise;
   const page = await pdf.getPage(1);
-  const content = await page.getTextContent();
+  let content = await page.getTextContent();
+  if(!content.items.length){
+    // pdf.js worker บางครั้งเริ่มต้นไม่ทันในรอบแรก (โดยเฉพาะโหลดผ่าน dynamic import) แล้วคืนค่าง่ายๆ ว่าง
+    // ลองใหม่อีกรอบก่อนจะถือว่า PDF นี้ไม่มีเลเยอร์ข้อความจริงๆ
+    await new Promise(r=>setTimeout(r, 400));
+    content = await page.getTextContent();
+  }
   if(!content.items.length) return '';
   // จัดกลุ่มชิ้นข้อความเป็น "บรรทัด" ตามตำแหน่งแนวตั้งที่ใกล้กัน แล้วเรียงซ้าย→ขวาในแต่ละบรรทัด
   const rows = [];
