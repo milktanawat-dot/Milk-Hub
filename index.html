@@ -2434,7 +2434,8 @@ async function ocrInputDataUrl(file, maxDim){
 /* แปลงเลขไทย (๐-๙) เป็นเลขอารบิกในข้อความที่ OCR อ่านมา — บางสลิป/เอกสารใช้เลขไทย ตัวจับตัวเลขเดิมจะมองไม่เห็นเลย */
 function normalizeOcrText(text){
   const th = '๐๑๒๓๔๕๖๗๘๙';
-  return (text||'').replace(/[๐-๙]/g, ch => String(th.indexOf(ch)));
+  let t = (text||'').normalize('NFC');   // รวมรูปแบบยูนิโค้ดให้เป็นมาตรฐานเดียว (สระ/วรรณยุกต์ผสม) กัน .includes() หาไม่เจอทั้งที่หน้าตาเหมือนกันทุกประการ
+  return t.replace(/[๐-๙]/g, ch => String(th.indexOf(ch)));
 }
 
 /* ── อ่านไฟล์ Excel/CSV (SheetJS โหลดตอนใช้จริง) — แปลงเป็นบรรทัดข้อความแล้วใช้ตัวแยกรายการเดียวกับแชท ── */
@@ -2500,14 +2501,15 @@ function lastOcrNum(str){
    ไปแย่งจับคู่ก่อนถึงบรรทัดที่มีคำเฉพาะเจาะจงจริงๆ (เช่น "รวมเงินได้ทั้งสิ้น" ที่อยู่ท้ายเอกสาร) */
 function findNearNumber(lines, keywords){
   for(const kw of keywords){
-    const kwLow = kw.toLowerCase();
+    const kwLow = kw.normalize('NFC').toLowerCase();
     for(let i=0;i<lines.length;i++){
-      const low = lines[i].toLowerCase();
+      const lineNorm = lines[i].normalize('NFC');
+      const low = lineNorm.toLowerCase();
       const idx = low.indexOf(kwLow);
       if(idx===-1) continue;
-      let n = ocrNum(lines[i].slice(idx+kw.length));
+      let n = ocrNum(lineNorm.slice(idx+kw.length));
       if(n!==null) return n;
-      n = lastOcrNum(lines[i].slice(0, idx));
+      n = lastOcrNum(lineNorm.slice(0, idx));
       if(n!==null) return n;
       if(lines[i+1]){ n = ocrNum(lines[i+1]); if(n!==null) return n; }
       if(lines[i-1]){ n = lastOcrNum(lines[i-1]); if(n!==null) return n; }
