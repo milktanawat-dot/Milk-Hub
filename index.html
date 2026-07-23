@@ -1242,7 +1242,7 @@
 <script>
 /* ── storage helpers (localStorage — ไฟล์นี้รันแบบ standalone ในเครื่อง) ── */
 const LS_PREFIX = 'milkhub:';
-const BUILD_VERSION = 'ocr-fix-2026-07-23-c';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
+const BUILD_VERSION = 'ocr-fix-2026-07-23-d-noworker';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
 async function sGet(key, fallback){
   try{ const raw = localStorage.getItem(LS_PREFIX+key); return raw ? JSON.parse(raw) : fallback; }
   catch(e){ return fallback; }
@@ -2392,7 +2392,7 @@ function ensurePdfJs(){
 async function pdfFirstPageToImage(file, maxDim){
   const pdfjsLib = await ensurePdfJs();
   const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const pdf = await pdfjsLib.getDocument({data: buf, disableWorker: true}).promise;
   const page = await pdf.getPage(1);
   const v0 = page.getViewport({scale:1});
   // PDF เป็นกราฟิกแบบเวกเตอร์ ขยายได้แบบไม่เบลอ — เรนเดอร์ความละเอียดสูงกว่ารูปถ่ายทั่วไปได้เพื่อความคมชัดของตัวเลข/จุดทศนิยม
@@ -2411,7 +2411,7 @@ async function pdfFirstPageToImage(file, maxDim){
 async function pdfExtractText(file){
   const pdfjsLib = await ensurePdfJs();
   const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const pdf = await pdfjsLib.getDocument({data: buf, disableWorker: true}).promise;
   const page = await pdf.getPage(1);
   let content = await page.getTextContent();
   if(!content.items.length){
