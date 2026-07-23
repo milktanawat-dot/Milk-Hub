@@ -2563,6 +2563,7 @@ async function runOcr(file, statusElId, maxDim){
   }catch(e){
     console.error(e);
     if(statusEl) statusEl.textContent = '⚠️ อ่านไม่สำเร็จ';
+    window._lastOcrMethod = `[⚠️ OCR ล้มเหลว: ${e.message||e}]`;
     toast(isPdf ? '⚠️ อ่านไฟล์ PDF นี้ไม่สำเร็จ ลองไฟล์อื่นหรือแคปหน้าจอเป็นรูปแทน' : '⚠️ OCR อ่านรูปนี้ไม่สำเร็จ ลองรูปที่คมชัดกว่านี้');
     return null;
   }
@@ -2607,18 +2608,48 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   const isPdf = f.type==='application/pdf' || /\.pdf$/i.test(f.name||'');
   const status = document.getElementById('t-ocr-status');
   if(status) status.textContent = isPdf ? 'กำลังแปลง PDF และอ่านข้อมูล…' : 'กำลังอ่านข้อมูล…';
-  const text = await runOcr(f, 't-ocr-status', isPdf ? 3000 : 1900); if(!text) return;
+  const text = await runOcr(f, 't-ocr-status', isPdf ? 3000 : 1900);
+  if(!text){
+    // อ่านล้มเหลวทั้งหมด — โชว์ debug ไว้ด้วยเสมอ กันเป็น "เงียบ ไม่รู้ว่าเกิดอะไรขึ้น" แบบเดิม
+    if(window._lastOcrMethod){
+      document.getElementById('t-ocr-debug').style.display = '';
+      document.getElementById('t-ocr-rawtext').textContent = window._lastOcrMethod;
+    }
+    return;
+  }
   document.getElementById('t-ocr-debug').style.display = '';
   document.getElementById('t-ocr-rawtext').textContent = (window._lastOcrMethod ? window._lastOcrMethod+'\n\n' : '') + text;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
-  let gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้','เงินได้สุทธิ','net pay','total income','เงินได้พึงประเมิน','รายได้รวม','gross','เงินเดือน']);
+  let gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้','เงินได้สุทธิ','net pay','total income','เงินได้พึงประเมิน','รายได้รวม','gross']);
   const wh = findNearNumber(lines, ['ภาษีหัก ณ ที่จ่าย','หัก ณ ที่จ่าย','ภาษีหัก','tax withheld','withholding','ภงด','income tax']);
   const sso = findNearNumber(lines, ['ประกันสังคม','social security','sso','ปกส']);
-  const pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','เงินกองทุนสำรองเลี้ยงชีพ','สำรองเลี้ยงชีพ','สำรองเลี้ยง','pvd','provident','กบข','สะสม pvd']);
+  let pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','เงินกองทุนสำรองเลี้ยงชีพ','สำรองเลี้ยงชีพ','สำรองเลี้ยง','pvd','provident','กบข','สะสม pvd']);
+  if(pvd===null){
+    // ป้ายกำกับเต็มอาจถูก OCR อ่านเพี้ยนบางตัวอักษร — เผื่อไว้อีกชั้น: บรรทัดที่มีทั้ง "กองทุน" และ "เลี้ยง" ใกล้กัน (ไม่ต้องติดกันเป๊ะ)
+    for(let i=0;i<lines.length;i++){
+      if(lines[i].includes('กองทุน') && lines[i].includes('เลี้ยง')){
+        const n = lastOcrNum(lines[i]) ?? ocrNum(lines[i]);
+        if(n!==null){ pvd = n; break; }
+      }
+    }
+  }
   if(gross===null){
-    // ไม่เจอป้ายกำกับที่รู้จักเลย (OCR อาจอ่านคำเพี้ยนไปนิดหน่อย) — ใช้ตัวเลขที่ใหญ่ที่สุดในเอกสารแทน
-    // เพราะสลิปเงินเดือนแทบทุกแบบ "รวมเงินได้ทั้งสิ้น" จะเป็นตัวเลขที่ใหญ่ที่สุดในหน้าเสมอ
-    // จับเฉพาะรูปแบบตัวเลขเงินบาท (มีจุดทศนิยม 2 ตำแหน่ง) กันไปปนกับเลขบัตร/เลขบัญชี/รหัสที่ไม่มีทศนิยม
+    // ป้ายกำกับ "รวมเงินได้ทั้งสิ้น" มักอยู่ในกล่องสรุปแยกต่างหาก ที่ OCR รูปภาพมักมองข้ามไปทั้งกล่อง —
+    // คำนวณจาก "ผลรวมของรายการเงินได้แต่ละบรรทัด" แทน (เช่น เงินเดือน/ค่าจ้าง + ค่าล่วงเวลา ฯลฯ)
+    // วิธีนี้แม่นกว่าเดาจาก "ตัวเลขที่ใหญ่ที่สุด" เพราะอิงจากโครงสร้างสลิปจริง ไม่ใช่เดาสุ่ม
+    const incomeKw = ['เงินเดือน/ค่าจ้าง','เงินเดือน','ค่าจ้าง','ค่าล่วงเวลา','ค่าตอบแทน','เบี้ยเลี้ยง','โบนัส','ค่าครองชีพ'];
+    let incomeSum = 0, matchedLines = new Set();
+    for(const kw of incomeKw){
+      for(let i=0;i<lines.length;i++){
+        if(matchedLines.has(i) || !lines[i].includes(kw)) continue;
+        const n = lastOcrNum(lines[i]);
+        if(n!==null && n>0){ incomeSum += n; matchedLines.add(i); }
+      }
+    }
+    if(incomeSum>0) gross = incomeSum;
+  }
+  if(gross===null){
+    // ยังไม่เจออีก — ใช้ตัวเลขที่ใหญ่ที่สุดในเอกสารเป็นทางเลือกสุดท้าย (จับเฉพาะรูปแบบเงินบาทมีทศนิยม 2 ตำแหน่ง กันปนเลขบัตร/บัญชี)
     const moneyMatches = text.match(/\d{1,3}(?:,\d{3})*\.\d{2}/g) || [];
     const nums = moneyMatches.map(s=>parseFloat(s.replace(/,/g,''))).filter(n=>n>0);
     if(nums.length) gross = Math.max(...nums);
