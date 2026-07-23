@@ -2394,6 +2394,7 @@ async function pdfFirstPageToImage(file, maxDim){
   const pdf = await pdfjsLib.getDocument({data: buf}).promise;
   const page = await pdf.getPage(1);
   const v0 = page.getViewport({scale:1});
+  // PDF เป็นกราฟิกแบบเวกเตอร์ ขยายได้แบบไม่เบลอ — เรนเดอร์ความละเอียดสูงกว่ารูปถ่ายทั่วไปได้เพื่อความคมชัดของตัวเลข/จุดทศนิยม
   const scale = Math.max(maxDim / Math.max(v0.width, v0.height), 0.5);
   const viewport = page.getViewport({scale});
   const canvas = document.createElement('canvas');
@@ -2401,7 +2402,7 @@ async function pdfFirstPageToImage(file, maxDim){
   const ctx = canvas.getContext('2d');
   await page.render({canvasContext: ctx, viewport}).promise;
   enhanceCanvasForOcr(ctx, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.94);
+  return canvas.toDataURL('image/png');   // PNG แบบไม่บีบอัดสูญเสีย — กัน JPEG ทำเส้นตาราง/จุดทศนิยมเบลอ
 }
 /* ดึงข้อความจริงจาก PDF โดยตรง (ไม่ผ่าน OCR เลย) — PDF ที่สร้างจากโปรแกรม/ระบบ (สลิปเงินเดือน, e-statement)
    เกือบทั้งหมดมีเลเยอร์ข้อความฝังอยู่แล้ว อ่านตรงๆ แม่นยำ 100% เร็วกว่า OCR มาก ไม่มีปัญหาอ่านเลขผิด
@@ -2527,16 +2528,23 @@ function findDate(text){
 async function runOcr(file, statusElId, maxDim){
   const statusEl = document.getElementById(statusElId);
   const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name||'');
+  window._lastOcrMethod = '';
   if(isPdf){
     if(statusEl) statusEl.textContent = 'กำลังอ่านข้อความจาก PDF โดยตรง…';
     try{
       const text = await pdfExtractText(file);
-      if(text.replace(/\s/g,'').length > 15){
+      const cleanLen = text.replace(/\s/g,'').length;
+      if(cleanLen > 15){
         if(statusEl) statusEl.textContent = '✓ อ่านข้อความจาก PDF โดยตรง (แม่นยำสูง ไม่ผ่าน OCR)';
+        window._lastOcrMethod = `[วิธีอ่าน: ข้อความจาก PDF โดยตรง — เจอ ${cleanLen} ตัวอักษร]`;
         return normalizeOcrText(text);
       }
+      window._lastOcrMethod = `[PDF นี้แทบไม่มีเลเยอร์ข้อความ (เจอแค่ ${cleanLen} ตัวอักษร) — เปลี่ยนไปใช้ OCR จากภาพแทน]`;
       // ข้อความว่าง/สั้นเกินไป — PDF นี้น่าจะเป็นภาพสแกน ไปต่อ OCR ตามปกติด้านล่าง
-    }catch(e){ console.warn('อ่านข้อความ PDF โดยตรงไม่สำเร็จ ลอง OCR แทน', e); }
+    }catch(e){
+      console.warn('อ่านข้อความ PDF โดยตรงไม่สำเร็จ ลอง OCR แทน', e);
+      window._lastOcrMethod = `[อ่านข้อความ PDF โดยตรงไม่สำเร็จ: ${e.message||e} — เปลี่ยนไปใช้ OCR จากภาพแทน]`;
+    }
   }
   if(typeof Tesseract === 'undefined'){
     if(statusEl) statusEl.textContent = '⚠️ โหลดตัวอ่าน OCR ไม่สำเร็จ (ต้องต่อเน็ตครั้งแรก)';
@@ -2550,6 +2558,7 @@ async function runOcr(file, statusElId, maxDim){
     if(statusEl) statusEl.textContent = 'กำลังอ่านตัวอักษร…';
     const { data } = await worker.recognize(dataUrl);
     if(statusEl) statusEl.textContent = '✓ อ่านเสร็จแล้ว (OCR)';
+    if(!window._lastOcrMethod) window._lastOcrMethod = '[วิธีอ่าน: OCR จากภาพ (Tesseract)]';
     return normalizeOcrText(data.text || '');
   }catch(e){
     console.error(e);
@@ -2571,7 +2580,7 @@ document.getElementById('m-ocr-file').onchange = async e=>{
   const isPdf = f.type==='application/pdf';
   const status = document.getElementById('m-ocr-status');
   if(status) status.textContent = isPdf ? 'กำลังแปลง PDF และอ่านข้อมูล…' : 'กำลังอ่านข้อมูล…';
-  const text = await runOcr(f, 'm-ocr-status', isPdf ? 2200 : 1800); if(!text) return;
+  const text = await runOcr(f, 'm-ocr-status', isPdf ? 3000 : 1800); if(!text) return;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
 
   // PDF ที่มีหลายรายการ (เช่นสเตทเมนต์) — ส่งต่อให้แชทช่วยแยกทีละรายการแทนการเติมฟอร์มเดียว
@@ -2598,9 +2607,9 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   const isPdf = f.type==='application/pdf' || /\.pdf$/i.test(f.name||'');
   const status = document.getElementById('t-ocr-status');
   if(status) status.textContent = isPdf ? 'กำลังแปลง PDF และอ่านข้อมูล…' : 'กำลังอ่านข้อมูล…';
-  const text = await runOcr(f, 't-ocr-status', isPdf ? 2200 : 1900); if(!text) return;
+  const text = await runOcr(f, 't-ocr-status', isPdf ? 3000 : 1900); if(!text) return;
   document.getElementById('t-ocr-debug').style.display = '';
-  document.getElementById('t-ocr-rawtext').textContent = text;
+  document.getElementById('t-ocr-rawtext').textContent = (window._lastOcrMethod ? window._lastOcrMethod+'\n\n' : '') + text;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
   const gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้','เงินได้สุทธิ','net pay','total income','เงินได้พึงประเมิน','รายได้รวม','gross','เงินเดือน']);
   const wh = findNearNumber(lines, ['ภาษีหัก ณ ที่จ่าย','หัก ณ ที่จ่าย','ภาษีหัก','tax withheld','withholding','ภงด','income tax']);
@@ -4187,7 +4196,7 @@ async function processReceiptFile(f){
     chatMe(`<img class="catt" src="${url}">📎 ${esc(f.name||'รูปที่แชร์มา')}`);
   } else chatMe(`📎 ${esc(f.name)}`);
   const status = chatBot(isPdf ? '🔍 กำลังแปลง PDF และอ่านข้อมูล… <span id="chat-ocr-st"></span>' : '🔍 กำลังอ่านข้อมูลจากไฟล์… <span id="chat-ocr-st"></span>');
-  const text = await runOcr(f, 'chat-ocr-st', isPdf ? 2200 : 1800);
+  const text = await runOcr(f, 'chat-ocr-st', isPdf ? 3000 : 1800);
   if(!text){ status.innerHTML='⚠️ อ่านไฟล์นี้ไม่สำเร็จ ลองรูปที่ชัดกว่านี้ หรือพิมพ์เองได้เลย'; return; }
 
   // ไฟล์ PDF มักเป็นสเตทเมนต์/e-slip ที่มีหลายรายการ — ลองแยกทีละบรรทัดก่อน เหมือนพิมพ์หลายบรรทัดในแชท
