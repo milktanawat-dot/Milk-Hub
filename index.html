@@ -2527,44 +2527,54 @@ function findDate(text){
 }
 async function runOcr(file, statusElId, maxDim){
   const statusEl = document.getElementById(statusElId);
-  const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name||'');
   window._lastOcrMethod = '';
-  if(isPdf){
-    if(statusEl) statusEl.textContent = 'กำลังอ่านข้อความจาก PDF โดยตรง…';
-    try{
-      const text = await pdfExtractText(file);
-      const cleanLen = text.replace(/\s/g,'').length;
-      if(cleanLen > 15){
-        if(statusEl) statusEl.textContent = '✓ อ่านข้อความจาก PDF โดยตรง (แม่นยำสูง ไม่ผ่าน OCR)';
-        window._lastOcrMethod = `[วิธีอ่าน: ข้อความจาก PDF โดยตรง — เจอ ${cleanLen} ตัวอักษร]`;
-        return normalizeOcrText(text);
-      }
-      window._lastOcrMethod = `[PDF นี้แทบไม่มีเลเยอร์ข้อความ (เจอแค่ ${cleanLen} ตัวอักษร) — เปลี่ยนไปใช้ OCR จากภาพแทน]`;
-      // ข้อความว่าง/สั้นเกินไป — PDF นี้น่าจะเป็นภาพสแกน ไปต่อ OCR ตามปกติด้านล่าง
-    }catch(e){
-      console.warn('อ่านข้อความ PDF โดยตรงไม่สำเร็จ ลอง OCR แทน', e);
-      window._lastOcrMethod = `[อ่านข้อความ PDF โดยตรงไม่สำเร็จ: ${e.message||e} — เปลี่ยนไปใช้ OCR จากภาพแทน]`;
-    }
-  }
-  if(typeof Tesseract === 'undefined'){
-    if(statusEl) statusEl.textContent = '⚠️ โหลดตัวอ่าน OCR ไม่สำเร็จ (ต้องต่อเน็ตครั้งแรก)';
-    toast('⚠️ โหลด OCR ไม่สำเร็จ — ต้องมีอินเทอร์เน็ตตอนโหลดครั้งแรก');
-    return null;
-  }
-  if(statusEl) statusEl.textContent = isPdf ? 'กำลังแปลง PDF เป็นรูป…' : 'กำลังเตรียมตัวอ่าน…';
   try{
-    const worker = await getOcrWorker();
-    const dataUrl = await ocrInputDataUrl(file, maxDim||1800);
-    if(statusEl) statusEl.textContent = 'กำลังอ่านตัวอักษร…';
-    const { data } = await worker.recognize(dataUrl);
-    if(statusEl) statusEl.textContent = '✓ อ่านเสร็จแล้ว (OCR)';
-    if(!window._lastOcrMethod) window._lastOcrMethod = '[วิธีอ่าน: OCR จากภาพ (Tesseract)]';
-    return normalizeOcrText(data.text || '');
+    const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name||'');
+    if(isPdf){
+      if(statusEl) statusEl.textContent = 'กำลังอ่านข้อความจาก PDF โดยตรง…';
+      try{
+        const text = await pdfExtractText(file);
+        const cleanLen = text.replace(/\s/g,'').length;
+        if(cleanLen > 15){
+          if(statusEl) statusEl.textContent = '✓ อ่านข้อความจาก PDF โดยตรง (แม่นยำสูง ไม่ผ่าน OCR)';
+          window._lastOcrMethod = `[วิธีอ่าน: ข้อความจาก PDF โดยตรง — เจอ ${cleanLen} ตัวอักษร]`;
+          return normalizeOcrText(text);
+        }
+        window._lastOcrMethod = `[PDF นี้แทบไม่มีเลเยอร์ข้อความ (เจอแค่ ${cleanLen} ตัวอักษร) — เปลี่ยนไปใช้ OCR จากภาพแทน]`;
+        // ข้อความว่าง/สั้นเกินไป — PDF นี้น่าจะเป็นภาพสแกน ไปต่อ OCR ตามปกติด้านล่าง
+      }catch(e){
+        console.warn('อ่านข้อความ PDF โดยตรงไม่สำเร็จ ลอง OCR แทน', e);
+        window._lastOcrMethod = `[อ่านข้อความ PDF โดยตรงไม่สำเร็จ: ${e.message||e} — เปลี่ยนไปใช้ OCR จากภาพแทน]`;
+      }
+    }
+    if(typeof Tesseract === 'undefined'){
+      if(statusEl) statusEl.textContent = '⚠️ โหลดตัวอ่าน OCR ไม่สำเร็จ (ต้องต่อเน็ตครั้งแรก)';
+      window._lastOcrMethod = '[⚠️ ตัวอ่าน OCR (Tesseract) ยังโหลดไม่เสร็จหรือโหลดไม่สำเร็จ — เช็คอินเทอร์เน็ตแล้วลองใหม่]';
+      toast('⚠️ โหลด OCR ไม่สำเร็จ — ต้องมีอินเทอร์เน็ตตอนโหลดครั้งแรก');
+      return null;
+    }
+    if(statusEl) statusEl.textContent = isPdf ? 'กำลังแปลง PDF เป็นรูป…' : 'กำลังเตรียมตัวอ่าน…';
+    try{
+      const worker = await getOcrWorker();
+      const dataUrl = await ocrInputDataUrl(file, maxDim||1800);
+      if(statusEl) statusEl.textContent = 'กำลังอ่านตัวอักษร…';
+      const { data } = await worker.recognize(dataUrl);
+      if(statusEl) statusEl.textContent = '✓ อ่านเสร็จแล้ว (OCR)';
+      if(!window._lastOcrMethod) window._lastOcrMethod = '[วิธีอ่าน: OCR จากภาพ (Tesseract)]';
+      return normalizeOcrText(data.text || '');
+    }catch(e){
+      console.error(e);
+      if(statusEl) statusEl.textContent = '⚠️ อ่านไม่สำเร็จ';
+      window._lastOcrMethod = `[⚠️ OCR ล้มเหลว: ${e.message||e}]`;
+      toast(isPdf ? '⚠️ อ่านไฟล์ PDF นี้ไม่สำเร็จ ลองไฟล์อื่นหรือแคปหน้าจอเป็นรูปแทน' : '⚠️ OCR อ่านรูปนี้ไม่สำเร็จ ลองรูปที่คมชัดกว่านี้');
+      return null;
+    }
   }catch(e){
-    console.error(e);
-    if(statusEl) statusEl.textContent = '⚠️ อ่านไม่สำเร็จ';
-    window._lastOcrMethod = `[⚠️ OCR ล้มเหลว: ${e.message||e}]`;
-    toast(isPdf ? '⚠️ อ่านไฟล์ PDF นี้ไม่สำเร็จ ลองไฟล์อื่นหรือแคปหน้าจอเป็นรูปแทน' : '⚠️ OCR อ่านรูปนี้ไม่สำเร็จ ลองรูปที่คมชัดกว่านี้');
+    // กันเหนียวชั้นนอกสุด — เผื่อมีข้อผิดพลาดที่ไม่คาดคิดเกิดขึ้นก่อนถึง try/catch ด้านในด้วยซ้ำ
+    console.error('runOcr unexpected error', e);
+    if(statusEl) statusEl.textContent = '⚠️ เกิดข้อผิดพลาดไม่คาดคิด';
+    window._lastOcrMethod = `[⚠️ เกิดข้อผิดพลาดไม่คาดคิด: ${e && e.message || e}]`;
+    toast('⚠️ เกิดข้อผิดพลาดที่ไม่คาดคิด ลองใหม่อีกครั้ง');
     return null;
   }
 }
@@ -2637,7 +2647,7 @@ document.getElementById('t-ocr-file').onchange = async e=>{
     // ป้ายกำกับ "รวมเงินได้ทั้งสิ้น" มักอยู่ในกล่องสรุปแยกต่างหาก ที่ OCR รูปภาพมักมองข้ามไปทั้งกล่อง —
     // คำนวณจาก "ผลรวมของรายการเงินได้แต่ละบรรทัด" แทน (เช่น เงินเดือน/ค่าจ้าง + ค่าล่วงเวลา ฯลฯ)
     // วิธีนี้แม่นกว่าเดาจาก "ตัวเลขที่ใหญ่ที่สุด" เพราะอิงจากโครงสร้างสลิปจริง ไม่ใช่เดาสุ่ม
-    const incomeKw = ['เงินเดือน/ค่าจ้าง','เงินเดือน','ค่าจ้าง','ค่าล่วงเวลา','ค่าตอบแทน','เบี้ยเลี้ยง','โบนัส','ค่าครองชีพ'];
+    const incomeKw = ['เงินเดือน/ค่าจ้าง','เงินเดือน','ค่าจ้าง','คาจ้าง','ค่าล่วงเวลา','ค่าลวงเวลา','คาล่วงเวลา','ล่วงเวลา','ค่าตอบแทน','เบี้ยเลี้ยง','โบนัส','ค่าครองชีพ'];
     let incomeSum = 0, matchedLines = new Set();
     for(const kw of incomeKw){
       for(let i=0;i<lines.length;i++){
