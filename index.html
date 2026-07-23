@@ -1242,7 +1242,7 @@
 <script>
 /* ── storage helpers (localStorage — ไฟล์นี้รันแบบ standalone ในเครื่อง) ── */
 const LS_PREFIX = 'milkhub:';
-const BUILD_VERSION = 'ocr-fix-2026-07-23-f-upscale-egat-verified';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
+const BUILD_VERSION = 'ocr-fix-2026-07-23-g-structural-fallback';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
 async function sGet(key, fallback){
   try{ const raw = localStorage.getItem(LS_PREFIX+key); return raw ? JSON.parse(raw) : fallback; }
   catch(e){ return fallback; }
@@ -2691,6 +2691,17 @@ document.getElementById('t-ocr-file').onchange = async e=>{
       }
     }
   }
+  if(pvd===null){
+    // ป้าย PVD เต็มๆ ("กองทุนสำรองเลี้ยงชีพ") มีสระ/วรรณยุกต์ผสมเยอะมาก บางครั้ง OCR เพี้ยนจนจับไม่ได้เลยทั้งคำ
+    // ใช้ตำแหน่งแทน: สลิปราชการ/รัฐวิสาหกิจไทยมาตรฐานเรียงฝั่งหักเป็น "ภาษีหัก" แล้วตามด้วย "กองทุนสำรองเลี้ยงชีพ" ลำดับที่ 2
+    // ซึ่งมักอยู่แถวเดียวกับ "เงินค่าล่วงเวลา" ฝั่งได้พอดี (แถวที่ 2 ของตาราง) — เอาตัวเลขที่อยู่ "ก่อน" ป้ายล่วงเวลาในบรรทัดเดียวกันแทน
+    for(let i=0;i<lines.length;i++){
+      const idx = lines[i].indexOf('ล่วงเวลา');
+      if(idx===-1) continue;
+      const n = lastOcrNum(lines[i].slice(0, idx));
+      if(n!==null){ pvd = n; break; }
+    }
+  }
   if(gross===null){
     // ป้ายกำกับ "รวมเงินได้ทั้งสิ้น" มักอยู่ในกล่องสรุปแยกต่างหาก ที่ OCR รูปภาพมักมองข้ามไปทั้งกล่อง —
     // คำนวณจาก "ผลรวมของรายการเงินได้แต่ละบรรทัด" แทน (เช่น เงินเดือน/ค่าจ้าง + ค่าล่วงเวลา ฯลฯ)
@@ -2703,6 +2714,18 @@ document.getElementById('t-ocr-file').onchange = async e=>{
         const n = lastOcrNum(lines[i]);
         if(n!==null && n>0){ incomeSum += n; matchedLines.add(i); }
       }
+    }
+    // รอบเสริม: ป้ายฝั่ง "เงินได้" (เช่น "เงินเดือน/ค่าจ้าง") มีสระ/วรรณยุกต์เยอะ OCR รูปภาพอ่านเพี้ยนจนจับไม่ได้บ่อยกว่าฝั่งหัก —
+    // แต่ป้ายฝั่ง "หัก" ที่สั้นกว่า (เช่น "ภาษีหัก") มักรอดพ้น OCR ได้ดีกว่า ถ้าบรรทัดนั้นจับป้ายฝั่งหักได้ และมีตัวเลขในบรรทัด
+    // ตั้งแต่ 3 ตัวขึ้นไป (สัญญาณว่าเป็นแถวตาราง 2 คอลัมน์ที่ merge ฝั่งหัก+ฝั่งได้เข้าด้วยกัน: หัก 1 + ได้(ปกติ/ปรับ/รวม) 3)
+    // ให้เอาตัวเลขตัวสุดท้ายของบรรทัด (คอลัมน์ "รวมเงิน" ฝั่งได้) มารวมเป็นรายได้ด้วย
+    const dedAnchorKw = ['ภาษีหัก','ประกันสังคม','ปกส'];
+    for(let i=0;i<lines.length;i++){
+      if(matchedLines.has(i) || !dedAnchorKw.some(kw=>lines[i].includes(kw))) continue;
+      const numCount = [...lines[i].matchAll(/-?\d+(?:[.,]\d+)*/g)].length;
+      if(numCount<3) continue;
+      const n = lastOcrNum(lines[i]);
+      if(n!==null && n>0){ incomeSum += n; matchedLines.add(i); }
     }
     if(incomeSum>0) gross = incomeSum;
   }
