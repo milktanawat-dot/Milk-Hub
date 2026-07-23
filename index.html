@@ -1242,6 +1242,7 @@
 <script>
 /* ── storage helpers (localStorage — ไฟล์นี้รันแบบ standalone ในเครื่อง) ── */
 const LS_PREFIX = 'milkhub:';
+const BUILD_VERSION = 'ocr-fix-2026-07-23-c';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
 async function sGet(key, fallback){
   try{ const raw = localStorage.getItem(LS_PREFIX+key); return raw ? JSON.parse(raw) : fallback; }
   catch(e){ return fallback; }
@@ -2621,14 +2622,12 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   const text = await runOcr(f, 't-ocr-status', isPdf ? 3000 : 1900);
   if(!text){
     // อ่านล้มเหลวทั้งหมด — โชว์ debug ไว้ด้วยเสมอ กันเป็น "เงียบ ไม่รู้ว่าเกิดอะไรขึ้น" แบบเดิม
-    if(window._lastOcrMethod){
-      document.getElementById('t-ocr-debug').style.display = '';
-      document.getElementById('t-ocr-rawtext').textContent = window._lastOcrMethod;
-    }
+    document.getElementById('t-ocr-debug').style.display = '';
+    document.getElementById('t-ocr-rawtext').textContent = `[build: ${BUILD_VERSION}]\n` + (window._lastOcrMethod || '(ไม่มีข้อความ error ให้แสดง)');
     return;
   }
   document.getElementById('t-ocr-debug').style.display = '';
-  document.getElementById('t-ocr-rawtext').textContent = (window._lastOcrMethod ? window._lastOcrMethod+'\n\n' : '') + text;
+  document.getElementById('t-ocr-rawtext').textContent = `[build: ${BUILD_VERSION}]\n` + (window._lastOcrMethod ? window._lastOcrMethod+'\n\n' : '') + text;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
   let gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้','เงินได้สุทธิ','net pay','total income','เงินได้พึงประเมิน','รายได้รวม','gross']);
   const wh = findNearNumber(lines, ['ภาษีหัก ณ ที่จ่าย','หัก ณ ที่จ่าย','ภาษีหัก','tax withheld','withholding','ภงด','income tax']);
