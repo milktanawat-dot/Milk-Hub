@@ -2611,10 +2611,18 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   document.getElementById('t-ocr-debug').style.display = '';
   document.getElementById('t-ocr-rawtext').textContent = (window._lastOcrMethod ? window._lastOcrMethod+'\n\n' : '') + text;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
-  const gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้','เงินได้สุทธิ','net pay','total income','เงินได้พึงประเมิน','รายได้รวม','gross','เงินเดือน']);
+  let gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้','เงินได้สุทธิ','net pay','total income','เงินได้พึงประเมิน','รายได้รวม','gross','เงินเดือน']);
   const wh = findNearNumber(lines, ['ภาษีหัก ณ ที่จ่าย','หัก ณ ที่จ่าย','ภาษีหัก','tax withheld','withholding','ภงด','income tax']);
   const sso = findNearNumber(lines, ['ประกันสังคม','social security','sso','ปกส']);
-  const pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','เงินกองทุนสำรองเลี้ยงชีพ','pvd','provident','กบข','สะสม pvd']);
+  const pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','เงินกองทุนสำรองเลี้ยงชีพ','สำรองเลี้ยงชีพ','สำรองเลี้ยง','pvd','provident','กบข','สะสม pvd']);
+  if(gross===null){
+    // ไม่เจอป้ายกำกับที่รู้จักเลย (OCR อาจอ่านคำเพี้ยนไปนิดหน่อย) — ใช้ตัวเลขที่ใหญ่ที่สุดในเอกสารแทน
+    // เพราะสลิปเงินเดือนแทบทุกแบบ "รวมเงินได้ทั้งสิ้น" จะเป็นตัวเลขที่ใหญ่ที่สุดในหน้าเสมอ
+    // จับเฉพาะรูปแบบตัวเลขเงินบาท (มีจุดทศนิยม 2 ตำแหน่ง) กันไปปนกับเลขบัตร/เลขบัญชี/รหัสที่ไม่มีทศนิยม
+    const moneyMatches = text.match(/\d{1,3}(?:,\d{3})*\.\d{2}/g) || [];
+    const nums = moneyMatches.map(s=>parseFloat(s.replace(/,/g,''))).filter(n=>n>0);
+    if(nums.length) gross = Math.max(...nums);
+  }
   if(gross!==null) document.getElementById('t-gross').value = gross;
   if(wh!==null) document.getElementById('t-wh').value = wh;
   if(sso!==null) document.getElementById('t-sso').value = sso;
