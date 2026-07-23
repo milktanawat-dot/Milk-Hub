@@ -2472,11 +2472,6 @@ function getOcrWorker(){
   if(!ocrWorkerPromise){
     ocrWorkerPromise = Tesseract.createWorker('tha+eng', 1, {
       logger: m => { if(m.status && m.progress!==undefined){ window._ocrProgress = m; updateOcrStatusBars(); } }
-    }).then(async w => {
-      // PSM 11 = sparse text: หาข้อความให้ได้มากที่สุดโดยไม่สนลำดับ/เค้าโครง
-      // ช่วยจับกล่องตัวเลขสรุปที่แยกออกมาต่างหาก (เช่นกล่อง "รวมเงินได้ทั้งสิ้น") ที่โหมดอัตโนมัติปกติมักมองข้าม
-      await w.setParameters({ tessedit_pageseg_mode: '11' });
-      return w;
     });
   }
   return ocrWorkerPromise;
