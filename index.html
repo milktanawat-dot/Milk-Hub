@@ -245,9 +245,9 @@
   .chart-box{background:var(--card2); border-radius:13px; padding:10px 8px 4px; margin-bottom:8px;}
   .chart-box .ct{font-size:11px; font-weight:700; color:var(--dim); padding:0 5px 4px; display:flex; justify-content:space-between;}
   .chart-box svg{width:100%; height:74px; display:block;}
-  /* กราฟเป้าหมาย: คงสัดส่วนของ viewBox เอาไว้เสมอ กันภาพยืด/บิดเบี้ยวทั้งจอมือถือและจอกว้าง */
-  .goal-chart-svg{width:100%; height:auto; aspect-ratio:600/220; max-height:240px; display:block;}
-  @media(max-width:560px){ .goal-chart-svg{max-height:190px;} }
+  /* กราฟเป้าหมาย: ความสูงคงที่แบบ responsive กว้างเต็มกล่องเสมอ — วาดด้วย JS ตามขนาดจริงของกล่อง กันภาพยืด/บิดเบี้ยว/เล็กลอยกลางกล่อง */
+  .goal-chart-svg{width:100%; height:200px; display:block;}
+  @media(max-width:560px){ .goal-chart-svg{height:160px;} }
 
 
   /* ── Health specific ── */
@@ -3483,7 +3483,14 @@ function findRequiredReturn(current, monthly, years, target){
 function drawGoalPath(svgId, path, target, color){
   const svg = document.getElementById(svgId);
   if(!svg) return;
-  const W=600,H=220,PADL=4,PADR=4,PADT=18,PADB=24;
+  // วาดตามขนาดพิกเซลจริงของกล่อง (ไม่ใช่ viewBox ตายตัว) แล้วตั้ง viewBox ให้ตรงกันเป๊ะ 1:1
+  // กราฟเลยเต็มกล่องพอดีเสมอ ไม่ยืด ไม่บิด ไม่เหลือขอบว่างซ้าย-ขวา ไม่ว่าจอจะกว้างแค่ไหน
+  const rect = svg.getBoundingClientRect();
+  const W = Math.round(rect.width) || 600;
+  const H = Math.round(rect.height) || 200;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const PADL=4,PADR=4,PADT=18,PADB=24;
   const vals = path.map(p=>p.value);
   let maxV = Math.max(...vals, target||0) * 1.1;
   let minV = Math.min(0, ...vals);
@@ -3539,6 +3546,27 @@ function drawGoalPath(svgId, path, target, color){
     `<polygon points="${areaPts}" fill="url(#${gid})"/>`+
     `<polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>`+
     targetLine+dots+hitMarker+endLbl+labels;
+}
+
+// วาดกราฟเป้าหมายใหม่เมื่อขนาดจอเปลี่ยน (หมุนจอมือถือ/ปรับขนาดหน้าต่างเว็บ) กันกราฟค้างสัดส่วนเก่า
+let _goalResizeTimer = null;
+let _goalResizeBound = false;
+function scheduleGoalChartsRedrawOnResize(items){
+  if(!_goalResizeBound){
+    window.addEventListener('resize', ()=>{
+      clearTimeout(_goalResizeTimer);
+      _goalResizeTimer = setTimeout(()=>{
+        (GOALS.items||[]).forEach((g,i)=>{
+          const svg = document.getElementById('g-chart-'+g.id);
+          if(!svg) return; // การ์ดนี้ไม่ได้อยู่ในจอ (เช่นเปลี่ยนหน้าไปแล้ว) ข้ามไป
+          const {path} = computeGoalPath(g);
+          const color = ASSET_COLORS[i%ASSET_COLORS.length];
+          drawGoalPath('g-chart-'+g.id, path, g.targetValue, color);
+        });
+      }, 150);
+    });
+    _goalResizeBound = true;
+  }
 }
 
 function renderGoalMilestones(g, finalVal, elId){
@@ -3802,6 +3830,7 @@ function renderGoals(){
 
   document.querySelectorAll('[data-gedit]').forEach(b=>b.onclick=()=>editGoal(b.dataset.gedit));
   document.querySelectorAll('[data-gdel]').forEach(b=>b.onclick=()=>deleteGoal(b.dataset.gdel));
+  scheduleGoalChartsRedrawOnResize(items);
   // อัปเดตมูลค่าปัจจุบันด้วยมือ — บันทึกพร้อมวันที่วันนี้ แล้วคำนวณปีที่เหลือ/เส้นทางต่อจากจุดนี้ทันที
   document.querySelectorAll('[data-gcur]').forEach(inp=>{
     inp.addEventListener('change', async ()=>{
