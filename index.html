@@ -245,6 +245,9 @@
   .chart-box{background:var(--card2); border-radius:13px; padding:10px 8px 4px; margin-bottom:8px;}
   .chart-box .ct{font-size:11px; font-weight:700; color:var(--dim); padding:0 5px 4px; display:flex; justify-content:space-between;}
   .chart-box svg{width:100%; height:74px; display:block;}
+  /* กราฟเป้าหมาย: คงสัดส่วนของ viewBox เอาไว้เสมอ กันภาพยืด/บิดเบี้ยวทั้งจอมือถือและจอกว้าง */
+  .goal-chart-svg{width:100%; height:auto; aspect-ratio:600/220; max-height:240px; display:block;}
+  @media(max-width:560px){ .goal-chart-svg{max-height:190px;} }
 
 
   /* ── Health specific ── */
@@ -3743,7 +3746,7 @@ function renderGoalCardHtml(g, i){
 
     <div class="chart-box" style="margin-top:12px">
       <div class="ct"><span>🔮 เส้นทางสู่เป้าหมาย — คำนวณจากมูลค่าปัจจุบัน</span><span>ถึงอายุ ${g.retireAge}</span></div>
-      <svg id="g-chart-${g.id}" viewBox="0 0 600 220" preserveAspectRatio="none" style="height:170px"></svg>
+      <svg id="g-chart-${g.id}" viewBox="0 0 600 220" preserveAspectRatio="xMidYMid meet" class="goal-chart-svg"></svg>
     </div>
 
     <div class="goal-milestones" id="g-mile-${g.id}" style="margin-top:10px"></div>
