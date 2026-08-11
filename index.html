@@ -1308,6 +1308,11 @@ document.querySelectorAll('[data-go]').forEach(t=>{ t.onclick = ()=>show(t.datas
 function show(v){
   document.querySelectorAll('.bnav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on', x.id==='v-'+v));
+  // พอสลับมาโชว์หน้าเป้าหมาย กล่องกราฟเพิ่งมีขนาดจริง (ตอนซ่อนอยู่ก่อนหน้านี้ขนาด = 0x0 เสมอ)
+  // ต้องรอ 1 เฟรมให้ browser จัด layout เสร็จก่อน แล้วค่อยวัดขนาดจริงมาวาดใหม่ ไม่งั้นกราฟจะเพี้ยน
+  if(v==='goals' && typeof redrawGoalCharts==='function'){
+    requestAnimationFrame(()=>requestAnimationFrame(redrawGoalCharts));
+  }
 }
 function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-scrim').classList.add('on'); }
 function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-scrim').classList.remove('on'); }
@@ -3486,8 +3491,13 @@ function drawGoalPath(svgId, path, target, color){
   // วาดตามขนาดพิกเซลจริงของกล่อง (ไม่ใช่ viewBox ตายตัว) แล้วตั้ง viewBox ให้ตรงกันเป๊ะ 1:1
   // กราฟเลยเต็มกล่องพอดีเสมอ ไม่ยืด ไม่บิด ไม่เหลือขอบว่างซ้าย-ขวา ไม่ว่าจอจะกว้างแค่ไหน
   const rect = svg.getBoundingClientRect();
-  const W = Math.round(rect.width) || 600;
-  const H = Math.round(rect.height) || 200;
+  if(rect.width < 10 || rect.height < 10){
+    // กล่องยังไม่มีขนาดจริง (เช่นหน้านี้ยังซ่อนอยู่ด้วย display:none) — วาดตอนนี้ยังไงก็เพี้ยนแน่นอน
+    // ข้ามไปก่อน แล้วปล่อยให้ show()/ตัว resize listener เรียกวาดซ้ำตอนกล่องมองเห็นจริงแทน
+    return;
+  }
+  const W = Math.round(rect.width);
+  const H = Math.round(rect.height);
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('preserveAspectRatio', 'none');
   const PADL=4,PADR=4,PADT=18,PADB=24;
@@ -3549,21 +3559,25 @@ function drawGoalPath(svgId, path, target, color){
 }
 
 // วาดกราฟเป้าหมายใหม่เมื่อขนาดจอเปลี่ยน (หมุนจอมือถือ/ปรับขนาดหน้าต่างเว็บ) กันกราฟค้างสัดส่วนเก่า
+// และเมื่อสลับมาที่หน้าเป้าหมาย (เพราะตอน renderGoals() วาดครั้งแรก หน้านี้มักซ่อนอยู่ (.view ที่ไม่ใช่ .on
+// จะมี display:none) getBoundingClientRect() เลยอ่านได้ 0x0 แล้ว fallback เป็น 600x200 ซึ่งไม่ตรงกับ
+// กล่องจริงที่โผล่มาทีหลัง → นี่คือสาเหตุหลักที่กราฟเพี้ยนบิดเบี้ยว ต้องวาดซ้ำตอนกล่อง "มองเห็นจริง" แล้วเท่านั้น)
 let _goalResizeTimer = null;
 let _goalResizeBound = false;
+function redrawGoalCharts(){
+  (GOALS.items||[]).forEach((g,i)=>{
+    const svg = document.getElementById('g-chart-'+g.id);
+    if(!svg) return; // การ์ดนี้ไม่ได้อยู่ในจอ (เช่นเปลี่ยนหน้าไปแล้ว) ข้ามไป
+    const {path} = computeGoalPath(g);
+    const color = ASSET_COLORS[i%ASSET_COLORS.length];
+    drawGoalPath('g-chart-'+g.id, path, g.targetValue, color);
+  });
+}
 function scheduleGoalChartsRedrawOnResize(items){
   if(!_goalResizeBound){
     window.addEventListener('resize', ()=>{
       clearTimeout(_goalResizeTimer);
-      _goalResizeTimer = setTimeout(()=>{
-        (GOALS.items||[]).forEach((g,i)=>{
-          const svg = document.getElementById('g-chart-'+g.id);
-          if(!svg) return; // การ์ดนี้ไม่ได้อยู่ในจอ (เช่นเปลี่ยนหน้าไปแล้ว) ข้ามไป
-          const {path} = computeGoalPath(g);
-          const color = ASSET_COLORS[i%ASSET_COLORS.length];
-          drawGoalPath('g-chart-'+g.id, path, g.targetValue, color);
-        });
-      }, 150);
+      _goalResizeTimer = setTimeout(redrawGoalCharts, 150);
     });
     _goalResizeBound = true;
   }
