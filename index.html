@@ -678,7 +678,7 @@
         <label><span>รายได้รวม (฿)</span><input type="number" id="t-gross" step="0.01"></label>
         <label><span>ภาษีหัก ณ ที่จ่าย (฿)</span><input type="number" id="t-wh" step="0.01"></label>
         <label><span>ประกันสังคม (฿)</span><input type="number" id="t-sso" step="0.01"></label>
-        <label><span>PVD (฿)</span><input type="number" id="t-pvd" step="0.01"></label>
+        <label><span>PVD · กองทุนสำรองเลี้ยงชีพ (฿)</span><input type="number" id="t-pvd" step="0.01"></label>
       </div>
       <div style="display:flex; gap:9px; align-items:center; flex-wrap:wrap">
         <button class="btn" id="t-add">บันทึกสลิป</button>
@@ -708,7 +708,7 @@
         <div class="frm" style="grid-template-columns:1fr 1fr">
           <label><span>ส่วนตัว</span><input value="60,000" disabled></label>
           <label><span>ประกันสังคม (จากสลิป · เพดาน 9,000)</span><input id="d-sso" disabled></label>
-          <label><span>PVD (จากสลิป)</span><input id="d-pvd" disabled></label>
+          <label><span>PVD · กองทุนสำรองเลี้ยงชีพ (จากสลิป)</span><input id="d-pvd" disabled></label>
         </div>
         <div class="hint" style="margin:6px 0 4px;font-weight:700;color:var(--dim)">ครอบครัว</div>
         <div class="frm" style="grid-template-columns:1fr 1fr">
@@ -1245,7 +1245,7 @@
 <script>
 /* ── storage helpers (localStorage — ไฟล์นี้รันแบบ standalone ในเครื่อง) ── */
 const LS_PREFIX = 'milkhub:';
-const BUILD_VERSION = 'ocr-fix-2026-08-25-h-pdf-password';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
+const BUILD_VERSION = 'ocr-fix-2026-08-25-i-standalone-label-cdn-fallback';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
 async function sGet(key, fallback){
   try{ const raw = localStorage.getItem(LS_PREFIX+key); return raw ? JSON.parse(raw) : fallback; }
   catch(e){ return fallback; }
@@ -2391,14 +2391,35 @@ async function imageFileToOcrDataUrl(file, maxDim){
    ธรรมดาให้โหลดแบบ <script src> อีกต่อไป — ของเดิมชี้ไปที่ pdf.min.js ซึ่งไม่มีอยู่จริง
    ทำให้โหลดไม่สำเร็จและอ่าน PDF ไม่ได้เลยสักไฟล์ แก้เป็นใช้ dynamic import() ของโมดูลแทน */
 let pdfjsReadyPromise = null;
+/* โหลด pdf.js จาก CDN สำรอง 2 เจ้า — บางเครือข่าย/บางมือถือบล็อก cdnjs.cloudflare.com (โดนจัดเป็นโดเมน Cloudflare
+   ที่บางไฟร์วอลล์/DNS filter บล็อกไว้) แต่ยังโหลด jsdelivr ได้ปกติ (โดเมนเดียวกับที่ใช้โหลด Tesseract.js อยู่แล้ว
+   ในหน้านี้) ถ้าโหลดไม่สำเร็จเลยสักเจ้า ก็ยังมี timeout กันค้างเป็นสถานะ "กำลังอ่าน…" ไปตลอดโดยไม่มีข้อความ error ใดๆ */
 function ensurePdfJs(){
   if(!pdfjsReadyPromise){
     pdfjsReadyPromise = (async ()=>{
       if(window.pdfjsLib) return window.pdfjsLib;
-      const mod = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
-      mod.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
-      window.pdfjsLib = mod;
-      return mod;
+      const withTimeout = (p, ms)=> Promise.race([
+        p,
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('โหลดตัวอ่าน PDF ช้าเกินไปหรือถูกบล็อก (เช็คอินเทอร์เน็ต)')), ms))
+      ]);
+      const sources = [
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs',
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs',
+      ];
+      const workerSources = [
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs',
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs',
+      ];
+      let lastErr = null;
+      for(let i=0;i<sources.length;i++){
+        try{
+          const mod = await withTimeout(import(sources[i]), 20000);
+          mod.GlobalWorkerOptions.workerSrc = workerSources[i];
+          window.pdfjsLib = mod;
+          return mod;
+        }catch(e){ lastErr = e; console.warn('โหลด pdf.js จาก', sources[i], 'ไม่สำเร็จ ลองแหล่งถัดไป', e); }
+      }
+      throw lastErr || new Error('โหลดตัวอ่าน PDF ไม่สำเร็จ');
     })().catch(e=>{ pdfjsReadyPromise = null; throw e; });   // โหลดพลาด ให้ลองใหม่ได้ในครั้งถัดไป ไม่ค้างพังตลอดไป
   }
   return pdfjsReadyPromise;
@@ -2604,6 +2625,13 @@ function lastOcrNum(str){
   const matches = [...str.matchAll(/-?\d+(?:[.,]\d+)*/g)];
   return matches.length ? parseMoneyToken(matches[matches.length-1][0]) : null;
 }
+/* เลขที่ "หน้าตาเป็นเงิน" จริงๆ — ต้องมีจุด/จุลภาคคั่นอย่างน้อยหนึ่งกลุ่ม (เช่น "45,000" หรือ "45000.00")
+   ใช้ตอนกวาดหาเลขแบบกว้างๆ ห่างจากป้ายกำกับหลายบรรทัด กันไปจับเลขรหัสพนักงาน/ลำดับข้อ/เลขบัตรที่เป็นจำนวนเต็มโดดๆ ผิดตัว */
+function moneyLikeNum(str){
+  if(!str) return null;
+  const matches = [...str.matchAll(/-?\d+(?:[.,]\d+)+/g)];
+  return matches.length ? parseMoneyToken(matches[matches.length-1][0]) : null;
+}
 /* หาเลขที่อยู่ใกล้ที่สุดกับ keyword — เช็คทั้งข้างหลัง, ข้างหน้า (กรณีตารางเอาจำนวนเงินไว้ก่อนชื่อรายการ), และบรรทัดติดกัน */
 /* ไล่ตามลำดับความสำคัญของ "keywords" ที่ผู้เรียกกำหนด (คำเฉพาะเจาะจงสุดควรอยู่ต้นลิสต์) —
    ค้นคำแรกในลิสต์ทั่วทั้งเอกสารก่อน ถ้าไม่เจอเลยค่อยลองคำถัดไป กันปัญหาคำทั่วไป (เช่น "เงินเดือน" ที่ไปโผล่ในหัวตาราง/ชื่อคอลัมน์)
@@ -2616,12 +2644,30 @@ function findNearNumber(lines, keywords){
       const low = lineNorm.toLowerCase();
       const idx = low.indexOf(kwLow);
       if(idx===-1) continue;
-      let n = ocrNum(lineNorm.slice(idx+kw.length));
+      const afterLabel = lineNorm.slice(idx+kw.length);
+      const beforeLabel = lineNorm.slice(0, idx);
+      let n = ocrNum(afterLabel);
       if(n!==null) return n;
-      n = lastOcrNum(lineNorm.slice(0, idx));
+      n = lastOcrNum(beforeLabel);
       if(n!==null) return n;
-      if(lines[i+1]){ n = ocrNum(lines[i+1]); if(n!==null) return n; }
-      if(lines[i-1]){ n = lastOcrNum(lines[i-1]); if(n!==null) return n; }
+      // ป้ายอยู่ตัวเดียวโดดๆ บนบรรทัดของมันเอง (ไม่มีเลขติดกันเลยทั้งก่อน/หลังป้ายบนบรรทัดเดียวกัน) มักแปลว่า
+      // นี่คือ "หัวข้อ" ของกล่องสรุปแยกต่างหาก (เจอบ่อยกับ "รวมเงินได้ทั้งสิ้น") ไม่ใช่รูปแบบ "ป้าย: ค่า" ธรรมดา
+      // ค่าจริงของหัวข้อแบบนี้อยู่ "ถัดจากนี้ไปข้างหน้า" เสมอ ไม่เคยอยู่ก่อนหน้า — ถ้าเผลอมองบรรทัดก่อนป้าย
+      // จะหยิบตัวเลขของรายการอื่นที่ไม่เกี่ยวข้องกันเลยมาผิดๆ (เช่น "เงินเดือน"/"ค่าล่วงเวลา" ที่อยู่เหนือกล่องสรุปพอดี)
+      const standaloneLabel = !/\d/.test(afterLabel) && !/\d/.test(beforeLabel);
+      if(lines[i+1]){
+        n = standaloneLabel ? moneyLikeNum(lines[i+1]) : ocrNum(lines[i+1]);
+        if(n!==null) return n;
+      }
+      if(!standaloneLabel && lines[i-1]){ n = lastOcrNum(lines[i-1]); if(n!==null) return n; }
+      // ป้ายกำกับเจอแล้วแต่หาเลขติดกันไม่เจอเลย — บางสลิป (โดยเฉพาะ "รวมเงินได้ทั้งสิ้น") ยอดจริงอยู่ใน
+      // กล่องสรุปแยกต่างหาก ห่างจากป้ายกำกับออกไปอีกไม่กี่บรรทัด กวาดกว้างขึ้นอีก 2-4 บรรทัด
+      // รับเฉพาะเลขที่ "หน้าตาเป็นเงิน" จริงๆ (มีจุด/จุลภาคคั่น) กันจับเลขรหัส/ลำดับที่เป็นจำนวนเต็มล้วนๆ ผิดตัว —
+      // ถ้าป้ายเป็นหัวข้อโดดๆ ค้นแค่ทิศทาง "ถัดไป" เท่านั้น (ค่าไม่มีทางอยู่ก่อนหน้าหัวข้อของมันเอง)
+      for(let d=2; d<=4; d++){
+        if(lines[i+d]){ n = moneyLikeNum(lines[i+d]); if(n!==null) return n; }
+        if(!standaloneLabel && lines[i-d]){ n = moneyLikeNum(lines[i-d]); if(n!==null) return n; }
+      }
     }
   }
   return null;
@@ -2770,14 +2816,14 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   let gross = findNearNumber(lines, ['รวมเงินได้ทั้งสิ้น','เงินได้ทั้งสิ้น','รวมเงินได้สุทธิก่อนหัก','รวมเงินได้','รายได้รวมทั้งสิ้น','รายได้รวม','เงินได้พึงประเมิน','total income','gross income','gross pay','gross']);
   const wh = findNearNumber(lines, ['ภาษีเงินได้หัก ณ ที่จ่าย','ภาษีหัก ณ ที่จ่าย','หัก ณ ที่จ่าย','ภาษีเงินได้บุคคลธรรมดา','ภาษีหัก','tax withheld','withholding tax','withholding','ภงด','income tax']);
   const sso = findNearNumber(lines, ['เงินสมทบประกันสังคม','ประกันสังคม','social security','sso','ปกส']);
-  let pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','เงินสะสมกองทุนสำรองเลี้ยงชีพ','เงินกองทุนสำรองเลี้ยงชีพ','สำรองเลี้ยงชีพ','สำรองเลี้ยง','กบข','กสจ','pvd','provident fund','provident','สะสม pvd']);
+  let pvd = findNearNumber(lines, ['กองทุนสำรองเลี้ยงชีพ','เงินสะสมกองทุนสำรองเลี้ยงชีพ','เงินสมทบกองทุนสำรองเลี้ยงชีพ','เงินกองทุนสำรองเลี้ยงชีพ','สมทบกองทุนสำรองเลี้ยงชีพ','สำรองเลี้ยงชีพ','สำรองเลี้ยง','กบข','กสจ','pvd','provident fund','provident','สะสม pvd']);
   if(pvd===null){
     // ป้ายกำกับเต็มอาจถูกตัดขึ้นบรรทัดใหม่ (ตาราง 2 คอลัมน์กว้างไม่พอ) หรือ OCR อ่านเพี้ยนบางตัวอักษร —
-    // เผื่อไว้อีกชั้น: เช็คคำว่า "กองทุน" กับ "เลี้ยง" ทั้งในบรรทัดเดียวกันและบรรทัดถัดไป (ไม่ต้องติดกันเป๊ะ)
+    // เผื่อไว้อีกชั้น: เช็คคำว่า "กองทุน" กับ "เลี้ยง" ในช่วง 3 บรรทัดติดกัน (ไม่ต้องอยู่บรรทัดเดียวกัน/ติดกันเป๊ะ)
     for(let i=0;i<lines.length;i++){
-      const pair = lines[i] + ' ' + (lines[i+1]||'');
+      const pair = lines[i] + ' ' + (lines[i+1]||'') + ' ' + (lines[i+2]||'');
       if(pair.includes('กองทุน') && pair.includes('เลี้ยง')){
-        const n = lastOcrNum(lines[i]) ?? ocrNum(lines[i]) ?? lastOcrNum(pair);
+        const n = lastOcrNum(lines[i]) ?? ocrNum(lines[i]) ?? moneyLikeNum(pair) ?? lastOcrNum(pair);
         if(n!==null){ pvd = n; break; }
       }
     }
