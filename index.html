@@ -1245,7 +1245,7 @@
 <script>
 /* ── storage helpers (localStorage — ไฟล์นี้รันแบบ standalone ในเครื่อง) ── */
 const LS_PREFIX = 'milkhub:';
-const BUILD_VERSION = 'ocr-fix-2026-08-25-i-standalone-label-cdn-fallback';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
+const BUILD_VERSION = 'ocr-fix-2026-08-26-j-egat-gross-pvd-verified';   // เปลี่ยนทุกครั้งที่แก้ OCR — ใช้เช็คว่าไฟล์ที่เปิดอยู่เป็นเวอร์ชันล่าสุดจริงไหม
 async function sGet(key, fallback){
   try{ const raw = localStorage.getItem(LS_PREFIX+key); return raw ? JSON.parse(raw) : fallback; }
   catch(e){ return fallback; }
@@ -2632,6 +2632,15 @@ function moneyLikeNum(str){
   const matches = [...str.matchAll(/-?\d+(?:[.,]\d+)+/g)];
   return matches.length ? parseMoneyToken(matches[matches.length-1][0]) : null;
 }
+/* ตัดวรรณยุกต์/เครื่องหมายกำกับเสียงไทยออก (ไม้เอก/โท/ตรี/จัตวา, การันต์, ยามักการ, นิคหิต) — OCR รูปภาพ/สแกน
+   มักอ่านพลาดหรือมองข้ามเครื่องหมายพวกนี้ไปเลย (เช่น "เลี้ยง" ถูกอ่านเป็น "เลียง" ขาดไม้โท ้) ใช้เทียบคำแบบ
+   ผ่อนปรนเป็นทางเลือกสำรอง กันพลาดแค่เพราะวรรณยุกต์หายไปตัวเดียวทั้งที่พยัญชนะ/สระถูกต้องหมด
+   ก่อนตัด รวม "นิคหิต+สระอา" (ํ + า) ให้เป็น "สระอำ" ตัวเดียวก่อนเสมอ — บางฟอนต์/OCR แยกสระอำเป็นสองตัวอักษร
+   ซึ่งไม่ตรงกับสระอำตัวเดียวปกติ ถ้าไม่รวมก่อนจะเทียบคำที่มีสระอำ (เช่น "สำรอง") พลาดอยู่ดี */
+function stripThaiTone(str){
+  let s = (str||'').normalize('NFC').replace(/ํา/g, 'ำ');
+  return s.replace(/[่-๎]/g, '');
+}
 /* หาเลขที่อยู่ใกล้ที่สุดกับ keyword — เช็คทั้งข้างหลัง, ข้างหน้า (กรณีตารางเอาจำนวนเงินไว้ก่อนชื่อรายการ), และบรรทัดติดกัน */
 /* ไล่ตามลำดับความสำคัญของ "keywords" ที่ผู้เรียกกำหนด (คำเฉพาะเจาะจงสุดควรอยู่ต้นลิสต์) —
    ค้นคำแรกในลิสต์ทั่วทั้งเอกสารก่อน ถ้าไม่เจอเลยค่อยลองคำถัดไป กันปัญหาคำทั่วไป (เช่น "เงินเดือน" ที่ไปโผล่ในหัวตาราง/ชื่อคอลัมน์)
@@ -2639,24 +2648,44 @@ function moneyLikeNum(str){
 function findNearNumber(lines, keywords){
   for(const kw of keywords){
     const kwLow = kw.normalize('NFC').toLowerCase();
+    const kwLoose = stripThaiTone(kwLow);
     for(let i=0;i<lines.length;i++){
       const lineNorm = lines[i].normalize('NFC');
       const low = lineNorm.toLowerCase();
-      const idx = low.indexOf(kwLow);
+      let idx = low.indexOf(kwLow);
+      let loose = false;
+      if(idx===-1){
+        // ตรงเป๊ะไม่เจอ — ลองเทียบแบบตัดวรรณยุกต์ออกทั้งสองฝั่งเป็นทางเลือกสุดท้ายต่อคำนี้
+        idx = stripThaiTone(low).indexOf(kwLoose);
+        loose = idx!==-1;
+      }
       if(idx===-1) continue;
-      const afterLabel = lineNorm.slice(idx+kw.length);
-      const beforeLabel = lineNorm.slice(0, idx);
+      // ตำแหน่ง idx จากการเทียบแบบ loose อ้างอิงพิกัดของสตริงที่ตัดวรรณยุกต์แล้ว ไม่ตรงกับพิกัดจริงใน lineNorm
+      // (ความยาวไม่เท่ากัน) เลยตัดข้อความก่อน/หลังป้ายแบบแม่นยำไม่ได้ — ใช้ทั้งบรรทัดแทนสำหรับกรณีนี้
+      const afterLabel = loose ? '' : lineNorm.slice(idx+kw.length);
+      const beforeLabel = loose ? '' : lineNorm.slice(0, idx);
       let n = ocrNum(afterLabel);
       if(n!==null) return n;
       n = lastOcrNum(beforeLabel);
       if(n!==null) return n;
+      if(loose){
+        // แบบหลวม: ไม่รู้ตำแหน่งป้ายที่แน่นอนในบรรทัด (เทียบแบบตัดวรรณยุกต์ทำให้พิกัดเพี้ยน) — เอา "ตัวเลขตัวแรก"
+        // ของบรรทัดก่อนเสมอ ไม่ใช่ตัวสุดท้าย เพราะป้ายฝั่งซ้าย (เช่น รายการหักในตาราง 2 คอลัมน์) มักมีค่าของตัวเองตามมา
+        // ทันทีเป็นตัวเลขตัวแรกของบรรทัด ส่วนตัวเลขท้ายบรรทัดมักเป็นของรายการฝั่งขวาที่ไม่เกี่ยวข้องกันเลย (คนละรายการ
+        // ที่ OCR ดันมาอยู่บรรทัดเดียวกัน) — เจอจริงจากสลิป กฟผ. ที่ "กองทุนสำรองเลี้ยงชีพ" เพี้ยนวรรณยุกต์แล้วไปแมตช์
+        // กับบรรทัดตารางที่มี "เงินค่าล่วงเวลา" ต่อท้าย ถ้าใช้ตัวสุดท้ายจะได้ยอดล่วงเวลาผิดๆ แทนยอด PVD จริง
+        n = ocrNum(lineNorm);
+        if(n!==null) return n;
+        n = lastOcrNum(lineNorm);
+        if(n!==null) return n;
+      }
       // ป้ายอยู่ตัวเดียวโดดๆ บนบรรทัดของมันเอง (ไม่มีเลขติดกันเลยทั้งก่อน/หลังป้ายบนบรรทัดเดียวกัน) มักแปลว่า
       // นี่คือ "หัวข้อ" ของกล่องสรุปแยกต่างหาก (เจอบ่อยกับ "รวมเงินได้ทั้งสิ้น") ไม่ใช่รูปแบบ "ป้าย: ค่า" ธรรมดา
       // ค่าจริงของหัวข้อแบบนี้อยู่ "ถัดจากนี้ไปข้างหน้า" เสมอ ไม่เคยอยู่ก่อนหน้า — ถ้าเผลอมองบรรทัดก่อนป้าย
       // จะหยิบตัวเลขของรายการอื่นที่ไม่เกี่ยวข้องกันเลยมาผิดๆ (เช่น "เงินเดือน"/"ค่าล่วงเวลา" ที่อยู่เหนือกล่องสรุปพอดี)
-      const standaloneLabel = !/\d/.test(afterLabel) && !/\d/.test(beforeLabel);
+      const standaloneLabel = !loose && !/\d/.test(afterLabel) && !/\d/.test(beforeLabel);
       if(lines[i+1]){
-        n = standaloneLabel ? moneyLikeNum(lines[i+1]) : ocrNum(lines[i+1]);
+        n = (standaloneLabel || loose) ? moneyLikeNum(lines[i+1]) : ocrNum(lines[i+1]);
         if(n!==null) return n;
       }
       if(!standaloneLabel && lines[i-1]){ n = lastOcrNum(lines[i-1]); if(n!==null) return n; }
@@ -2820,10 +2849,15 @@ document.getElementById('t-ocr-file').onchange = async e=>{
   if(pvd===null){
     // ป้ายกำกับเต็มอาจถูกตัดขึ้นบรรทัดใหม่ (ตาราง 2 คอลัมน์กว้างไม่พอ) หรือ OCR อ่านเพี้ยนบางตัวอักษร —
     // เผื่อไว้อีกชั้น: เช็คคำว่า "กองทุน" กับ "เลี้ยง" ในช่วง 3 บรรทัดติดกัน (ไม่ต้องอยู่บรรทัดเดียวกัน/ติดกันเป๊ะ)
+    // เทียบแบบตัดวรรณยุกต์ออกก่อนด้วย (OCR รูปภาพชอบทำไม้โทของ "เลี้ยง" หายไปเป็น "เลียง")
+    const kwFund = stripThaiTone('กองทุน'), kwLiang = stripThaiTone('เลี้ยง');
     for(let i=0;i<lines.length;i++){
-      const pair = lines[i] + ' ' + (lines[i+1]||'') + ' ' + (lines[i+2]||'');
-      if(pair.includes('กองทุน') && pair.includes('เลี้ยง')){
-        const n = lastOcrNum(lines[i]) ?? ocrNum(lines[i]) ?? moneyLikeNum(pair) ?? lastOcrNum(pair);
+      const pairRaw = lines[i] + ' ' + (lines[i+1]||'') + ' ' + (lines[i+2]||'');
+      const pair = stripThaiTone(pairRaw);
+      if(pair.includes(kwFund) && pair.includes(kwLiang)){
+        // แถวนี้มักเป็นแถวตาราง 2 คอลัมน์ (ฝั่งหัก = PVD มาก่อน ตามด้วยฝั่งได้ของรายการอื่นในบรรทัดเดียวกัน)
+        // เอาตัวเลข "ตัวแรก" ของบรรทัดก่อนเสมอ (คือยอด PVD ฝั่งหัก) ไม่ใช่ตัวสุดท้าย (ซึ่งมักเป็นยอดฝั่งได้ของรายการข้างๆ)
+        const n = ocrNum(lines[i]) ?? lastOcrNum(lines[i]) ?? moneyLikeNum(pairRaw) ?? lastOcrNum(pairRaw);
         if(n!==null){ pvd = n; break; }
       }
     }
@@ -2832,18 +2866,21 @@ document.getElementById('t-ocr-file').onchange = async e=>{
     // ป้าย PVD เต็มๆ ("กองทุนสำรองเลี้ยงชีพ") มีสระ/วรรณยุกต์ผสมเยอะมาก บางครั้ง OCR เพี้ยนจนจับไม่ได้เลยทั้งคำ
     // ใช้ตำแหน่งแทน: สลิปราชการ/รัฐวิสาหกิจไทยมาตรฐานเรียงฝั่งหักเป็น "ภาษีหัก" แล้วตามด้วย "กองทุนสำรองเลี้ยงชีพ" ลำดับที่ 2
     // ซึ่งมักอยู่แถวเดียวกับ "เงินค่าล่วงเวลา" ฝั่งได้พอดี (แถวที่ 2 ของตาราง) — เอาตัวเลขที่อยู่ "ก่อน" ป้ายล่วงเวลาในบรรทัดเดียวกันแทน
+    // เผื่อ "ล่วงเวลา" เองก็ถูก OCR อ่านเพี้ยนด้วย (เช่น ล↔ส สับกัน เจอจริงจากสลิป กฟผ.) ใส่คำที่เพี้ยนบ่อยๆ ไว้ด้วย
+    const lwKw = ['ล่วงเวลา','ส่วงเวลา','ลวงเวลา','ล่วงเวสา','สวงเวลา'];
     for(let i=0;i<lines.length;i++){
-      const idx = lines[i].indexOf('ล่วงเวลา');
-      if(idx===-1) continue;
+      const idx = lwKw.map(k=>lines[i].indexOf(k)).find(x=>x!==-1);
+      if(idx===undefined) continue;
       const n = lastOcrNum(lines[i].slice(0, idx));
       if(n!==null){ pvd = n; break; }
     }
   }
   if(gross===null){
-    // ป้ายกำกับ "รวมเงินได้ทั้งสิ้น" มักอยู่ในกล่องสรุปแยกต่างหาก ที่ OCR รูปภาพมักมองข้ามไปทั้งกล่อง —
-    // คำนวณจาก "ผลรวมของรายการเงินได้แต่ละบรรทัด" แทน (เช่น เงินเดือน/ค่าจ้าง + ค่าล่วงเวลา ฯลฯ)
-    // วิธีนี้แม่นกว่าเดาจาก "ตัวเลขที่ใหญ่ที่สุด" เพราะอิงจากโครงสร้างสลิปจริง ไม่ใช่เดาสุ่ม
-    const incomeKw = ['เงินเดือน/ค่าจ้าง','เงินเดือน','ค่าจ้าง','คาจ้าง','ค่าล่วงเวลา','ค่าลวงเวลา','คาล่วงเวลา','ล่วงเวลา','ค่าตอบแทน','เบี้ยเลี้ยง','โบนัส','ค่าครองชีพ'];
+    // ป้ายกำกับ "รวมเงินได้ทั้งสิ้น" มักอยู่ในกล่องสรุปแยกต่างหาก ที่ OCR รูปภาพมักมองข้ามไปทั้งกล่อง — หรือบางสลิป
+    // (เช่นแบบ กฟผ.) ไม่มีป้าย "รวมเงินได้" เลยด้วยซ้ำ มีแต่ตารางรายรับแยกบรรทัด — คำนวณจาก "ผลรวมของรายการเงินได้
+    // แต่ละบรรทัด" แทน (เช่น เงินเดือน/ค่าจ้าง + ค่าล่วงเวลา ฯลฯ) วิธีนี้แม่นกว่าเดาจาก "ตัวเลขที่ใหญ่ที่สุด" เพราะอิงจาก
+    // โครงสร้างสลิปจริง ไม่ใช่เดาสุ่ม
+    const incomeKw = ['เงินเดือน/ค่าจ้าง','เงินเดือน','ค่าจ้าง','คาจ้าง','ค่าล่วงเวลา','ค่าลวงเวลา','คาล่วงเวลา','ล่วงเวลา','ส่วงเวลา','ค่าตอบแทน','เบี้ยเลี้ยง','โบนัส','ค่าครองชีพ'];
     let incomeSum = 0, matchedLines = new Set();
     for(const kw of incomeKw){
       for(let i=0;i<lines.length;i++){
@@ -2852,16 +2889,15 @@ document.getElementById('t-ocr-file').onchange = async e=>{
         if(n!==null && n>0){ incomeSum += n; matchedLines.add(i); }
       }
     }
-    // รอบเสริม: ป้ายฝั่ง "เงินได้" (เช่น "เงินเดือน/ค่าจ้าง") มีสระ/วรรณยุกต์เยอะ OCR รูปภาพอ่านเพี้ยนจนจับไม่ได้บ่อยกว่าฝั่งหัก —
-    // แต่ป้ายฝั่ง "หัก" ที่สั้นกว่า (เช่น "ภาษีหัก") มักรอดพ้น OCR ได้ดีกว่า ถ้าบรรทัดนั้นจับป้ายฝั่งหักได้ และมีตัวเลขในบรรทัด
-    // ตั้งแต่ 3 ตัวขึ้นไป (สัญญาณว่าเป็นแถวตาราง 2 คอลัมน์ที่ merge ฝั่งหัก+ฝั่งได้เข้าด้วยกัน: หัก 1 + ได้(ปกติ/ปรับ/รวม) 3)
-    // ให้เอาตัวเลขตัวสุดท้ายของบรรทัด (คอลัมน์ "รวมเงิน" ฝั่งได้) มารวมเป็นรายได้ด้วย
-    const dedAnchorKw = ['ภาษีหัก','ประกันสังคม','ปกส'];
+    // รอบเสริม (ไม่พึ่งคำป้ายกำกับเลย): บรรทัดไหนที่ยังไม่ถูกนับ แต่มีตัวเลขแบบเงิน (มีจุด/จุลภาคคั่น) ตั้งแต่ 3 ตัวขึ้นไป
+    // มักคือแถวตาราง 2 คอลัมน์ที่ merge ฝั่งหัก (1 ตัวเลข) + ฝั่งได้ (ปกติ/ปรับ/รวม = 3 ตัวเลข) เข้าด้วยกัน — ไม่สนว่า
+    // ป้ายกำกับฝั่งหักของแถวนั้น OCR อ่านออกมาเป็นอะไร (ภาษี/ประกันสังคม/PVD/ค่าอื่นๆ ก็ได้ทั้งนั้น) ทนทานกว่าเดิมที่
+    // ผูกกับคำป้ายกำกับฝั่งหักไม่กี่แบบตายตัว — เอาตัวเลขตัวสุดท้ายของแถว (คอลัมน์ "รวม" ฝั่งได้) มารวมเป็นรายได้
     for(let i=0;i<lines.length;i++){
-      if(matchedLines.has(i) || !dedAnchorKw.some(kw=>lines[i].includes(kw))) continue;
-      const numCount = [...lines[i].matchAll(/-?\d+(?:[.,]\d+)*/g)].length;
-      if(numCount<3) continue;
-      const n = lastOcrNum(lines[i]);
+      if(matchedLines.has(i)) continue;
+      const moneyTokens = [...lines[i].matchAll(/-?\d+(?:[.,]\d+)+/g)];
+      if(moneyTokens.length<3) continue;
+      const n = parseMoneyToken(moneyTokens[moneyTokens.length-1][0]);
       if(n!==null && n>0){ incomeSum += n; matchedLines.add(i); }
     }
     if(incomeSum>0) gross = incomeSum;
