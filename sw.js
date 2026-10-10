@@ -1,5 +1,5 @@
 /* Milk Hub service worker — ทำให้เปิด offline ได้ */
-const CACHE = 'milkhub-v2';
+const CACHE = 'milkhub-v3';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -20,8 +20,8 @@ self.addEventListener('fetch', e => {
   // API ภายนอก (Binance/Finnhub/Graph/Tesseract/MSAL) — ผ่านเน็ตตรงเสมอ
   if (url.origin !== location.origin) return;
 
-  // หน้าแอปหลัก: network-first (ได้เวอร์ชันใหม่เมื่อออนไลน์ ใช้ cache เมื่อออฟไลน์)
-  if (e.request.mode === 'navigate' || url.pathname.endsWith('index.html')) {
+  // หน้าแอปหลัก + สคริปต์ (เช่น milk-money-bridge.js): network-first (ได้เวอร์ชันใหม่เมื่อออนไลน์ ใช้ cache เมื่อออฟไลน์)
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('index.html') || url.pathname.endsWith('.js')) {
     e.respondWith(
       fetch(e.request)
         .then(res => { caches.open(CACHE).then(c => c.put(e.request, res.clone())); return res.clone(); })
